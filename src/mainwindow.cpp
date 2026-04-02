@@ -1619,7 +1619,6 @@ QString MainWindow::selectESP()
         return {};
     }
 
-    bool ok;
     QInputDialog dialog(this);
     dialog.setWindowTitle(tr("Select EFI System Partition"));
     dialog.setLabelText(tr("EFI System Partitions:"));
@@ -1629,12 +1628,9 @@ QString MainWindow::selectESP()
     QString selectedEsp;
     if (dialog.exec() == QDialog::Accepted) {
         selectedEsp = dialog.textValue().section(' ', 0, 0);
-        ok = true;
-    } else {
-        ok = false;
     }
 
-    if (!ok || selectedEsp.isEmpty()) {
+    if (selectedEsp.isEmpty()) {
         QMessageBox::warning(this, QApplication::applicationDisplayName(), tr("No EFI System Partition selected"));
         return {};
     }
@@ -1805,9 +1801,9 @@ bool MainWindow::saveBootOrder(const QListWidget *list)
 void MainWindow::setUefiTimeout(QWidget *uefiDialog, QLabel *textTimeout)
 {
     bool ok = false;
-    ushort initialTimeout = textTimeout->text().section(' ', 1, 1).toUInt();
-    ushort newTimeout = QInputDialog::getInt(uefiDialog, tr("Set timeout"), tr("Timeout in seconds:"), initialTimeout,
-                                             0, 65535, 1, &ok);
+    int initialTimeout = textTimeout->text().section(' ', 1, 1).toInt();
+    int newTimeout = QInputDialog::getInt(uefiDialog, tr("Set timeout"), tr("Timeout in seconds:"), initialTimeout,
+                                          0, 65535, 1, &ok);
 
     if (ok && Cmd().procAsRoot("efibootmgr", {"-t", QString::number(newTimeout)})) {
         textTimeout->setText(tr("Timeout: %1 seconds").arg(newTimeout));
