@@ -1184,13 +1184,12 @@ void MainWindow::getKernelOptions(const QString &bootDir)
     QString grepOut;
     cmd.procAsRoot("grep", {"-m1", "-oP", R"(^[[:space:]]*linux[[:space:]]+(/boot)?/vmlinuz-[^[:space:]]+\K.*)", grubFile}, &grepOut);
     QString bootOptions = grepOut.trimmed();
-    if (isSystemd()) {
-        bootOptions = bootOptions + " init=/lib/systemd/systemd";
-    }
-
     if (!bootOptions.isEmpty()) {
+        const QString initSystemd = "init=/lib/systemd/systemd";
+        if (isSystemd() && !bootOptions.contains(initSystemd) && isShimSystemd(kernelBootDir)) {
+            bootOptions = bootOptions + " " + initSystemd;
+        }
         ui->textKernelOptions->setText(bootOptions);
-
     } else {
         qWarning() << "Captured boot options are empty.";
     }
