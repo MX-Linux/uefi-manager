@@ -2030,7 +2030,7 @@ bool MainWindow::renameUefiEntry(const QString &oldLabel, const QString &newLabe
 
     // Validate device/partition name format
     QRegularExpression deviceRegex(
-        R"(^(/dev/sd[a-z]|nvme[[:digit:]]+n[[:digit:]]+|mmcblk[[:digit:]]+)p?([[:digit:]]+)$)");
+        R"(^(/dev/x?[hsv]d[a-z]|/dev/nvme[[:digit:]]+n[[:digit:]]+|/dev/mmcblk[[:digit:]]+)p?([[:digit:]]+)$)");
     QRegularExpressionMatch deviceMatch = deviceRegex.match(deviceForUuid);
     if (!deviceMatch.hasMatch()) {
         QMessageBox::critical(
