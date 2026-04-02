@@ -250,7 +250,7 @@ void MainWindow::setup()
         }
     }
 
-    // Refresh blkid cache early
+    // Refresh blkid cache (best-effort, may not update cache without root)
     cmd.proc("blkid");
 
     // Detect root device/partition once at startup
@@ -1403,7 +1403,7 @@ void MainWindow::guessPartition()
         "4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709"  // Linux root (x86-64)
     };
 
-    // Helper: check lsblk field for a partition against a regex pattern
+    // Helper: check cached partition info against a regex pattern
     auto findPartition = [&](const QString &field, const QRegularExpression &pattern) -> bool {
         QString drive = comboDrive->currentText().section(' ', 0, 0);
         if (drive == rootDrive) {
@@ -1418,9 +1418,12 @@ void MainWindow::guessPartition()
 
         for (int index = 0; index < partitionCount; ++index) {
             const QString part = comboPartition->itemText(index).section(' ', 0, 0);
-            QString value;
-            cmd.procAsRoot("lsblk", {"-ln", "-o", field, "/dev/" + part}, &value, nullptr, QuietMode::Yes);
-            if (pattern.match(value.trimmed()).hasMatch()) {
+            auto it = partitionInfoMap.constFind(part);
+            if (it == partitionInfoMap.constEnd()) {
+                continue;
+            }
+            const QString &value = (field == "LABEL") ? it->label : it->parttype;
+            if (pattern.match(value).hasMatch()) {
                 comboPartition->setCurrentIndex(index);
                 return true;
             }
@@ -1499,6 +1502,7 @@ void MainWindow::listDevices()
     partitionList.clear();
     linuxPartitionList.clear();
     frugalPartitionList.clear();
+    partitionInfoMap.clear();
 
     for (const QJsonValue &val : devices) {
         QJsonObject dev = val.toObject();
@@ -1514,6 +1518,10 @@ void MainWindow::listDevices()
 
         bool isDrive = (type == "disk") && driveNameRegex.match(name).hasMatch();
         bool isPartition = (type == "part") && partNameRegex.match(name).hasMatch();
+
+        if (isPartition) {
+            partitionInfoMap[name] = {label, parttype};
+        }
 
         // ESP list: EFI System Partitions with vfat filesystem
         if (isPartition && fstype.compare("vfat", Qt::CaseInsensitive) == 0

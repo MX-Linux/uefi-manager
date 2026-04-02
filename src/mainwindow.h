@@ -80,6 +80,11 @@ private:
     QStringList newDirectories;
     QStringList newLuksDevices;
     QStringList newMounts;
+    struct PartitionInfo {
+        QString label;
+        QString parttype;
+    };
+    QMap<QString, PartitionInfo> partitionInfoMap;
 
     static const QMap<QString, QString> PERSISTENCE_TYPES;
 
