@@ -316,7 +316,7 @@ void MainWindow::toggleUefiActive(QListWidget *listEntries)
     QString item = currentItem->text().section(' ', 0, 0).remove(QRegularExpression("^Boot"));
     QString rest = currentItem->text().section(' ', 1, -1);
 
-    if (!item.contains(QRegularExpression(R"(^[0-9A-Z]{4}\*?$)"))) {
+    if (!item.contains(QRegularExpression(R"(^[0-9A-Fa-f]{4}\*?$)"))) {
         return;
     }
 
@@ -797,7 +797,7 @@ void MainWindow::readBootEntries(QListWidget *listEntries, QLabel *textTimeout, 
     QString efiOut;
     cmd.proc("efibootmgr", {}, &efiOut);
     QStringList entries = efiOut.split('\n', Qt::SkipEmptyParts);
-    QRegularExpression bootEntryRegex(R"(^Boot[0-9A-F]{4}\*?\s+)");
+    QRegularExpression bootEntryRegex(R"(^Boot[0-9A-Fa-f]{4}\*?\s+)");
 
     for (const auto &item : std::as_const(entries)) {
         if (bootEntryRegex.match(item).hasMatch()) {
@@ -1787,7 +1787,7 @@ bool MainWindow::saveBootOrder(const QListWidget *list)
     for (int i = 0; i < list->count(); ++i) {
         QString item = list->item(i)->text().section(' ', 0, 0);
         item.remove(QRegularExpression("^Boot|\\*$"));
-        if (item.contains(QRegularExpression("^[0-9A-Z]{4}$"))) {
+        if (item.contains(QRegularExpression("^[0-9A-Fa-f]{4}$"))) {
             orderList.append(item);
         }
     }
@@ -1826,7 +1826,7 @@ void MainWindow::setUefiBootNext(QListWidget *listEntries, QLabel *textBootNext)
         item.remove(QRegularExpression("^Boot"));
         item.remove(QRegularExpression(R"(\*$)"));
 
-        if (QRegularExpression("^[0-9A-Z]{4}$").match(item).hasMatch()
+        if (QRegularExpression("^[0-9A-Fa-f]{4}$").match(item).hasMatch()
             && Cmd().procAsRoot("efibootmgr", {"-n", item})) {
             textBootNext->setText(tr("Boot Next: %1").arg(item));
         }
@@ -1855,7 +1855,7 @@ void MainWindow::removeUefiEntry(QListWidget *listEntries, QWidget *uefiDialog)
     item.remove(QRegularExpression("^Boot"));
     item.remove(QRegularExpression(R"(\*$)"));
 
-    if (!item.contains(QRegularExpression("^[0-9A-Z]{4}$"))) {
+    if (!item.contains(QRegularExpression("^[0-9A-Fa-f]{4}$"))) {
         return;
     }
 
