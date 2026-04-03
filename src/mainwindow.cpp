@@ -46,6 +46,11 @@
 #include "common.h"
 #include "log.h"
 
+namespace {
+const QRegularExpression bootStripRegex("^Boot|\\*$");
+const QRegularExpression hexIdRegex("^[0-9A-Fa-f]{4}$");
+}
+
 // Trying to map all the persistence type to values that make sense
 // when passed to the kernel at boot time for frugal installation
 const QMap<QString, QString> MainWindow::PERSISTENCE_TYPES = {{"persist_all", "persist_all"},
@@ -313,10 +318,12 @@ void MainWindow::toggleUefiActive(QListWidget *listEntries)
         return;
     }
 
-    QString item = currentItem->text().section(' ', 0, 0).remove(QRegularExpression("^Boot"));
+    static const QRegularExpression bootPrefixRegex("^Boot");
+    static const QRegularExpression hexIdStarRegex(R"(^[0-9A-Fa-f]{4}\*?$)");
+    QString item = currentItem->text().section(' ', 0, 0).remove(bootPrefixRegex);
     QString rest = currentItem->text().section(' ', 1, -1);
 
-    if (!item.contains(QRegularExpression(R"(^[0-9A-Fa-f]{4}\*?$)"))) {
+    if (!item.contains(hexIdStarRegex)) {
         return;
     }
 
@@ -797,7 +804,8 @@ void MainWindow::readBootEntries(QListWidget *listEntries, QLabel *textTimeout, 
     QString efiOut;
     cmd.proc("efibootmgr", {}, &efiOut);
     QStringList entries = efiOut.split('\n', Qt::SkipEmptyParts);
-    QRegularExpression bootEntryRegex(R"(^Boot[0-9A-Fa-f]{4}\*?\s+)");
+    static const QRegularExpression bootEntryRegex(R"(^Boot[0-9A-Fa-f]{4}\*?\s+)");
+    cachedTimeout = 0;
 
     for (const auto &item : std::as_const(entries)) {
         if (bootEntryRegex.match(item).hasMatch()) {
@@ -807,7 +815,8 @@ void MainWindow::readBootEntries(QListWidget *listEntries, QLabel *textTimeout, 
             }
             listEntries->addItem(listItem);
         } else if (item.startsWith("Timeout:")) {
-            textTimeout->setText(tr("Timeout: %1 seconds").arg(item.section(' ', 1).trimmed()));
+            cachedTimeout = item.section(' ', 1).trimmed().toInt();
+            textTimeout->setText(tr("Timeout: %1 seconds").arg(cachedTimeout));
         } else if (item.startsWith("BootNext:")) {
             textBootNext->setText(tr("Boot Next: %1").arg(item.section(' ', 1).trimmed()));
         } else if (item.startsWith("BootCurrent:")) {
@@ -1789,8 +1798,8 @@ bool MainWindow::saveBootOrder(const QListWidget *list)
     orderList.reserve(list->count());
     for (int i = 0; i < list->count(); ++i) {
         QString item = list->item(i)->text().section(' ', 0, 0);
-        item.remove(QRegularExpression("^Boot|\\*$"));
-        if (item.contains(QRegularExpression("^[0-9A-Fa-f]{4}$"))) {
+        item.remove(bootStripRegex);
+        if (item.contains(hexIdRegex)) {
             orderList.append(item);
         }
     }
@@ -1809,11 +1818,11 @@ bool MainWindow::saveBootOrder(const QListWidget *list)
 void MainWindow::setUefiTimeout(QWidget *uefiDialog, QLabel *textTimeout)
 {
     bool ok = false;
-    int initialTimeout = textTimeout->text().section(' ', 1, 1).toInt();
-    int newTimeout = QInputDialog::getInt(uefiDialog, tr("Set timeout"), tr("Timeout in seconds:"), initialTimeout,
+    int newTimeout = QInputDialog::getInt(uefiDialog, tr("Set timeout"), tr("Timeout in seconds:"), cachedTimeout,
                                           0, 65535, 1, &ok);
 
     if (ok && Cmd().procAsRoot("efibootmgr", {"-t", QString::number(newTimeout)})) {
+        cachedTimeout = newTimeout;
         textTimeout->setText(tr("Timeout: %1 seconds").arg(newTimeout));
     }
 }
@@ -1826,10 +1835,9 @@ void MainWindow::setUefiBootNext(QListWidget *listEntries, QLabel *textBootNext)
 
     if (auto currentItem = listEntries->currentItem()) {
         QString item = currentItem->text().section(' ', 0, 0);
-        item.remove(QRegularExpression("^Boot"));
-        item.remove(QRegularExpression(R"(\*$)"));
+        item.remove(bootStripRegex);
 
-        if (QRegularExpression("^[0-9A-Fa-f]{4}$").match(item).hasMatch()
+        if (hexIdRegex.match(item).hasMatch()
             && Cmd().procAsRoot("efibootmgr", {"-n", item})) {
             textBootNext->setText(tr("Boot Next: %1").arg(item));
         }
@@ -1855,10 +1863,9 @@ void MainWindow::removeUefiEntry(QListWidget *listEntries, QWidget *uefiDialog)
     }
 
     QString item = itemText.section(' ', 0, 0);
-    item.remove(QRegularExpression("^Boot"));
-    item.remove(QRegularExpression(R"(\*$)"));
+    item.remove(bootStripRegex);
 
-    if (!item.contains(QRegularExpression("^[0-9A-Fa-f]{4}$"))) {
+    if (!item.contains(hexIdRegex)) {
         return;
     }
 
@@ -1918,19 +1925,22 @@ bool MainWindow::isShimSystemd(const QString &rootPath) const
         return false;
     }
 
-    // Read symlink target without resolving through host filesystem
+    // Read raw symlink target without resolving through host filesystem
     QFileInfo initInfo(initPath);
     if (!initInfo.isSymLink()) {
-        return true; // init exists but is not a symlink to systemd
+        return true; // init is not a symlink to systemd, need explicit init= param
     }
 
     const QString target = initInfo.symLinkTarget();
-    // symLinkTarget returns absolute path within the mounted root, strip the root prefix
-    QString relativeTarget = target;
-    if (relativeTarget.startsWith(root)) {
-        relativeTarget = relativeTarget.mid(root.length());
+    // For absolute symlinks, resolve relative to the mounted root
+    QString resolvedTarget = target;
+    if (target.startsWith('/')) {
+        resolvedTarget = root + target;
     }
-    return !relativeTarget.endsWith("/systemd");
+    if (resolvedTarget.startsWith(root)) {
+        resolvedTarget = resolvedTarget.mid(root.length());
+    }
+    return !resolvedTarget.endsWith("/systemd");
 }
 
 bool MainWindow::renameUefiEntry(const QString &oldLabel, const QString &newLabel, const QString &oldBootNum)

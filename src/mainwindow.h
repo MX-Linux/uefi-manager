@@ -66,6 +66,7 @@ private:
     Ui::MainWindow *ui;
     Cmd cmd;
     QString distro = getDistroName();
+    int cachedTimeout = 0;
     QString espMountPoint;
     QString frugalDir;
     QString rootDrive;
@@ -114,7 +115,7 @@ private:
     bool renameUefiEntry(const QString &oldLabel, const QString &newLabel, const QString &oldBootNum = QString());
     static void removeUefiEntry(QListWidget *listEntries, QWidget *uefiDialog);
     static void setUefiBootNext(QListWidget *listEntries, QLabel *textBootNext);
-    static void setUefiTimeout(QWidget *uefiDialog, QLabel *textTimeout);
+    void setUefiTimeout(QWidget *uefiDialog, QLabel *textTimeout);
     static void sortUefiBootOrder(const QStringList &order, QListWidget *list);
     static void toggleUefiActive(QListWidget *listEntries);
     void addDevToList();
