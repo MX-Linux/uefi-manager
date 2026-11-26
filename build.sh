@@ -80,8 +80,16 @@ if [ "$DEBIAN_BUILD" = true ]; then
 
     echo "Creating debs directory and moving debian artifacts..."
     mkdir -p debs
-    # debuild writes to the parent directory, which other projects share: take only this package's files
-    mv ../uefi-manager_* ../uefi-manager-dbgsym_* debs/ 2>/dev/null || true
+    # debuild writes to the parent directory, which other projects share: take only this package's
+    # build output, as regular files with package suffixes (not e.g. a sibling uefi-manager_backup/)
+    for artifact in ../uefi-manager_* ../uefi-manager-dbgsym_*; do
+        [[ -f "$artifact" ]] || continue
+        case "$artifact" in
+            *.deb|*.ddeb|*.dsc|*.changes|*.buildinfo|*.build|*.tar.*)
+                mv -- "$artifact" debs/ || echo "Warning: could not move $artifact to debs/" >&2
+                ;;
+        esac
+    done
 
     echo "Cleaning build directory and debian artifacts..."
     rm -rf "$BUILD_DIR"
