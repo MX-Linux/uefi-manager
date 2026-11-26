@@ -69,6 +69,11 @@ private:
     int cachedTimeout = 0;
     QString espMountPoint;
     QString loaderSubDir; // Entry's directory under the ESP's EFI folder, set by selectESP()
+    // Where selectKernel() found the kernels, and the options it filled in, for refreshing them per kernel
+    QString kernelBootDir;
+    QString kernelRootDir;
+    QString autoKernelOptions;
+    bool fillingKernelList = false;
     QString frugalDir;
     QString rootDrive;
     QString rootPartition;
@@ -121,6 +126,7 @@ private:
     void addDevToList();
     void addUefiEntry(QWidget *dialogUefi);
     void checkDoneStub();
+    void kernelSelectionChanged(const QString &kernel);
     void clearEntryWidget();
     void cleanEspTarget(const QString &targetPath);
     void filterDrivePartitions();

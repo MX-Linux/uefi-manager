@@ -38,6 +38,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QScopedValueRollback>
 #include <QScreen>
 #include <QStorageInfo>
 #include <QTextStream>
@@ -347,6 +348,7 @@ void MainWindow::setConnections()
 
     connect(ui->comboDriveStub, &QComboBox::currentTextChanged, this, &MainWindow::checkDoneStub);
     connect(ui->comboKernel, &QComboBox::currentTextChanged, this, &MainWindow::checkDoneStub);
+    connect(ui->comboKernel, &QComboBox::currentTextChanged, this, &MainWindow::kernelSelectionChanged);
     connect(ui->comboPartitionStub, &QComboBox::currentTextChanged, this, &MainWindow::checkDoneStub);
     connect(ui->textEntryName, &QLineEdit::textChanged, this, &MainWindow::checkDoneStub);
     connect(ui->textKernelOptions, &QLineEdit::textChanged, this, &MainWindow::checkDoneStub);
@@ -758,6 +760,7 @@ void MainWindow::filterDrivePartitions()
 
 void MainWindow::selectKernel(const QString &rootDir)
 {
+    const QScopedValueRollback<bool> filling(fillingKernelList, true);
     QDir bootDir {getBootLocation(rootDir)};
     QStringList kernelFiles = bootDir.entryList({"vmlinuz-*"}, QDir::Files | QDir::NoDotAndDotDot, QDir::Name);
     std::transform(kernelFiles.begin(), kernelFiles.end(), kernelFiles.begin(),
@@ -781,7 +784,9 @@ void MainWindow::selectKernel(const QString &rootDir)
         }
     }
 
-    getKernelOptions(bootDir.absolutePath(), rootDir, ui->comboKernel->currentText());
+    kernelBootDir = bootDir.absolutePath();
+    kernelRootDir = rootDir;
+    getKernelOptions(kernelBootDir, kernelRootDir, ui->comboKernel->currentText());
     QString distroName;
     if (!QFile::exists(rootDir + "/etc/antix-version") && !QFile::exists(rootDir + "/etc/mx-version")
         && QFile::exists(rootDir + "/etc/os-release")) {
@@ -1192,6 +1197,18 @@ void MainWindow::getKernelOptions(const QString &bootDir, const QString &rootDir
     }
     bootOptions = combineBootOptions(bootOptions, rootDir);
     ui->textKernelOptions->setText(bootOptions);
+    autoKernelOptions = bootOptions;
+}
+
+// GRUB entries can give each kernel its own options, so reload them for the newly selected kernel,
+// unless the user has edited the field since it was filled in
+void MainWindow::kernelSelectionChanged(const QString &kernel)
+{
+    if (fillingKernelList || kernel.isEmpty() || kernelRootDir.isEmpty()
+        || ui->textKernelOptions->text() != autoKernelOptions) {
+        return;
+    }
+    getKernelOptions(kernelBootDir, kernelRootDir, kernel);
 }
 QString MainWindow::determineKernelDir(const QString &bootDir, const QString &rootDir)
 {
