@@ -37,6 +37,7 @@
 #include "common.h"
 #include "log.h"
 #include "mainwindow.h"
+#include <cerrno>
 #include <fcntl.h>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -47,7 +48,8 @@
 #endif
 
 bool isUefi();
-bool acquireInstanceLock();
+enum class LockResult { Acquired, AlreadyRunning, Unavailable };
+LockResult acquireInstanceLock();
 
 int main(int argc, char *argv[])
 {
@@ -136,9 +138,17 @@ int main(int argc, char *argv[])
                        << QApplication::applicationVersion();
 
     // One instance at a time: temporary mounts share one base directory, and cleanup on exit sweeps it
-    if (!acquireInstanceLock()) {
+    switch (acquireInstanceLock()) {
+    case LockResult::Acquired:
+        break;
+    case LockResult::AlreadyRunning:
+        QMessageBox::critical(nullptr, QObject::tr("UEFI Manager"), QObject::tr("UEFI Manager is already running."));
+        return EXIT_FAILURE;
+    case LockResult::Unavailable:
         QMessageBox::critical(nullptr, QObject::tr("UEFI Manager"),
-                              QObject::tr("UEFI Manager is already running."));
+                              QObject::tr("Could not use the lock file %1, so UEFI Manager can't make sure it is the "
+                                          "only instance running. Remove the file if no other instance is running.")
+                                  .arg("/tmp/uefi-manager.lock"));
         return EXIT_FAILURE;
     }
 
@@ -160,22 +170,32 @@ bool isUefi()
 // Hold an exclusive lock for the life of the process. flock() is released by the kernel when the
 // process exits, so a crashed instance never leaves a stale lock. The file may belong to another
 // user, and fs.protected_regular refuses O_CREAT on it in /tmp, so fall back to opening it as is.
-bool acquireInstanceLock()
+// Fail closed: without the lock, two instances could sweep each other's mounts.
+LockResult acquireInstanceLock()
 {
     const char *path = "/tmp/uefi-manager.lock";
-    int fd = open(path, O_RDONLY | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0644);
+    // O_NONBLOCK: a FIFO planted at the path would otherwise block open() forever
+    const int flags = O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC;
+    int fd = open(path, flags | O_CREAT, 0644);
     if (fd != -1) {
         fchmod(fd, 0644); // Ignore the umask so other users can open it too; fails harmlessly if not ours
     } else {
-        fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+        fd = open(path, flags);
     }
     if (fd == -1) {
         qWarning() << "Could not open instance lock" << path;
-        return true; // Don't block the user over a lock file we can't use
+        return LockResult::Unavailable;
+    }
+    struct stat lockStat {};
+    if (fstat(fd, &lockStat) != 0 || !S_ISREG(lockStat.st_mode)) {
+        qWarning() << "Instance lock is not a regular file:" << path;
+        close(fd);
+        return LockResult::Unavailable;
     }
     if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
+        const bool busy = errno == EWOULDBLOCK;
         close(fd);
-        return false;
+        return busy ? LockResult::AlreadyRunning : LockResult::Unavailable;
     }
-    return true; // Keep fd open until the process exits
+    return LockResult::Acquired; // Keep fd open until the process exits
 }
