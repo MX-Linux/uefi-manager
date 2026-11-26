@@ -66,12 +66,9 @@ void printError(const QString &message)
         {"efibootmgr", {"/usr/sbin/efibootmgr", "/sbin/efibootmgr", "/usr/bin/efibootmgr", "/bin/efibootmgr"}},
         {"findmnt", {"/usr/bin/findmnt", "/bin/findmnt"}},
         {"grep", {"/usr/bin/grep", "/bin/grep"}},
-        {"lsblk", {"/usr/bin/lsblk", "/bin/lsblk"}},
         {"mkdir", {"/usr/bin/mkdir", "/bin/mkdir"}},
         {"mount", {"/usr/bin/mount", "/bin/mount"}},
-        {"mountpoint", {"/usr/bin/mountpoint", "/bin/mountpoint"}},
         {"rm", {"/usr/bin/rm", "/bin/rm"}},
-        {"sfdisk", {"/usr/sbin/sfdisk", "/sbin/sfdisk", "/usr/bin/sfdisk", "/bin/sfdisk"}},
     };
     return commands;
 }

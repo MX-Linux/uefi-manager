@@ -49,7 +49,6 @@ expect_err_msg() {
 
 echo "=== Exec action tests ==="
 
-expect_ok   "allowed command: lsblk"          exec lsblk --version
 expect_ok   "allowed command: grep"           exec grep --version
 expect_ok   "allowed command: efibootmgr"     exec efibootmgr --version
 expect_err  "disallowed command: bash"        exec bash -c "echo hi"
@@ -58,6 +57,9 @@ expect_err  "disallowed command: cat"         exec cat /etc/passwd
 expect_err  "disallowed command: python"      exec python3 -c "print(1)"
 expect_err  "disallowed command: chmod"       exec chmod 777 /tmp
 expect_err  "disallowed command: chown"       exec chown root /tmp
+expect_err  "removed command: lsblk"          exec lsblk --version
+expect_err  "removed command: mountpoint"     exec mountpoint /
+expect_err  "removed command: sfdisk"         exec sfdisk --version
 
 echo "=== No arguments ==="
 
