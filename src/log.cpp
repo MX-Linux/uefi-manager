@@ -93,7 +93,9 @@ QByteArray Log::readLog()
     if (!file.open(QIODevice::ReadOnly)) {
         return {};
     }
-    return file.readAll();
+    // Same limit the archive keeps, so a huge log can't exhaust memory on the way out
+    constexpr qint64 maxArchiveSize = 10 * 1024 * 1024;
+    return file.read(maxArchiveSize);
 }
 
 bool Log::hasRelevantContent(qsizetype minimumLineCount)
