@@ -44,6 +44,8 @@
 #include <QTextStream>
 #include <QTimer>
 
+#include <functional>
+
 #include "about.h"
 #include "cmd.h"
 #include "common.h"
@@ -1167,13 +1169,26 @@ QString MainWindow::getDistroName(bool pretty, const QString &mountPoint, const 
 
     QString device = partition.startsWith("/dev/") ? partition : "/dev/" + partition;
 
+    // JSON, because the --pairs and --raw formats hex-escape spaces in mountpoints
     QString lsblkOut;
-    cmd.proc("lsblk", {"--pairs", "--output", "MOUNTPOINT", device}, &lsblkOut);
+    cmd.proc("lsblk", {"--json", "--output", "MOUNTPOINT", device}, &lsblkOut);
 
-    // Parse MOUNTPOINT="..." from first matching line
-    static const QRegularExpression mpRegex(R"delim(MOUNTPOINT="([^"]+)")delim");
-    QRegularExpressionMatch match = mpRegex.match(lsblkOut);
-    return match.hasMatch() ? match.captured(1) : QString();
+    // First mountpoint of the device or, e.g. for an unlocked LUKS partition, of its children
+    std::function<QString(const QJsonArray &)> findMountPoint = [&findMountPoint](const QJsonArray &devices) {
+        for (const QJsonValue &value : devices) {
+            const QJsonObject dev = value.toObject();
+            const QString mountPoint = dev.value("mountpoint").toString();
+            if (!mountPoint.isEmpty()) {
+                return mountPoint;
+            }
+            const QString childMountPoint = findMountPoint(dev.value("children").toArray());
+            if (!childMountPoint.isEmpty()) {
+                return childMountPoint;
+            }
+        }
+        return QString();
+    };
+    return findMountPoint(QJsonDocument::fromJson(lsblkOut.toUtf8()).object().value("blockdevices").toArray());
 }
 
 void MainWindow::getKernelOptions(const QString &bootDir, const QString &rootDir, const QString &kernel)
