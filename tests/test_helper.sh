@@ -14,7 +14,7 @@ FAIL=0
 #   expect_err <description> <args...>  — expect non-zero exit
 expect_ok() {
     local desc="$1"; shift
-    if "$HELPER" "$@" >/dev/null 2>&1; then
+    if "$HELPER" "$@" </dev/null >/dev/null 2>&1; then
         ((++PASS))
     else
         echo "FAIL (expected ok): $desc" >&2
@@ -24,7 +24,7 @@ expect_ok() {
 
 expect_err() {
     local desc="$1"; shift
-    if "$HELPER" "$@" >/dev/null 2>&1; then
+    if "$HELPER" "$@" </dev/null >/dev/null 2>&1; then
         echo "FAIL (expected error): $desc" >&2
         ((++FAIL))
     else
@@ -38,7 +38,7 @@ expect_err_msg() {
     local desc="$1"; shift
     local pattern="$1"; shift
     local stderr
-    stderr="$("$HELPER" "$@" 2>&1 >/dev/null || true)"
+    stderr="$("$HELPER" "$@" </dev/null 2>&1 >/dev/null || true)"
     if [[ "$stderr" == *"$pattern"* ]]; then
         ((++PASS))
     else
@@ -71,7 +71,7 @@ echo "=== Lib action tests ==="
 expect_err_msg "lib without subcommand" "lib requires a subcommand" lib
 expect_err_msg "invalid lib subcommand" "lib subcommand is not allowed" lib bad_subcommand
 
-stderr="$("$HELPER" lib copy_log 2>&1 || true)"
+stderr="$("$HELPER" lib copy_log </dev/null 2>&1 || true)"
 if [[ "$stderr" == *"lib subcommand is not allowed"* ]]; then
     echo "FAIL: allowed lib subcommand rejected" >&2
     ((++FAIL))
