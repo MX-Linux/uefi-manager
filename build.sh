@@ -124,6 +124,8 @@ if [ "$ARCH_BUILD" = true ]; then
     mkdir -p "$ARCH_BUILDDIR/src"
     cp -r "$PWD"/* "$ARCH_BUILDDIR/src/"
     cp PKGBUILD "$ARCH_BUILDDIR/"
+    # makepkg reads pkgver from the recipe, not the environment; pkgver can't contain hyphens
+    sed -i "s/^pkgver=.*/pkgver=${ARCH_VERSION//-/_}/" "$ARCH_BUILDDIR/PKGBUILD"
 
     # Clean previous build artifacts
     rm -rf pkg *.pkg.tar.zst
@@ -133,7 +135,7 @@ if [ "$ARCH_BUILD" = true ]; then
 
     # Build package (without --clean to preserve directories)
     cd "$ARCH_BUILDDIR"
-    BUILDDIR="$ARCH_BUILDDIR" PKGDEST="$PKG_DEST_DIR" PKGVER="$ARCH_VERSION" makepkg -f
+    BUILDDIR="$ARCH_BUILDDIR" PKGDEST="$PKG_DEST_DIR" makepkg -f
 
     # Clean makepkg artifacts
     echo "Cleaning makepkg artifacts..."
