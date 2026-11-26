@@ -182,6 +182,17 @@ void MainWindow::addUefiEntry(QListWidget *listEntries, QWidget *dialogUefi)
         return;
     }
 
+    // Most firmware can only read FAT EFI System Partitions, but some can read other filesystems
+    if (!partList.contains(partitionName)
+        && QMessageBox::warning(dialogUefi, tr("Warning"),
+                                tr("%1 is not on an EFI System Partition, so your firmware may not be able to "
+                                   "boot it.\n\nAdd the entry anyway?")
+                                    .arg(fileName),
+                                QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+               != QMessageBox::Yes) {
+        return;
+    }
+
     QString pkname;
     cmd.proc("lsblk", {"-no", "PKNAME", partitionName}, &pkname);
     const QString disk = "/dev/" + pkname.trimmed();
