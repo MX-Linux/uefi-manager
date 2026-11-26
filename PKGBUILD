@@ -2,7 +2,7 @@
 pkgname=uefi-manager
 pkgrel=1
 pkgdesc="A graphical tool for managing UEFI boot entries"
-pkgver=26.07.1
+pkgver=26.11
 arch=('x86_64' 'i686')
 url="https://mxlinux.org"
 license=('GPL3')

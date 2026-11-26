@@ -9,7 +9,7 @@
     <message>
         <location filename="../src/cmd.cpp" line="174"/>
         <source>This operation requires administrator privileges.</source>
-        <translation type="unfinished"/>
+        <translation>この操作を行うには、管理者権限が必要です。</translation>
     </message>
 </context>
 <context>
@@ -156,7 +156,7 @@
     <message>
         <location filename="../src/mainwindow.cpp" line="779"/>
         <source>A recent frugal install has been detected. Do you wish to add a UEFI entry direct to your UEFI system menu?</source>
-        <translation type="unfinished"/>
+        <translation>直近のフルーガルインストールを検出しました。UEFI システムメニューに直接 UEFI エントリを追加しますか？</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1026"/>
@@ -166,12 +166,12 @@
     <message>
         <location filename="../src/mainwindow.cpp" line="1033"/>
         <source>Enter passphrase to unlock %1 encrypted partition:</source>
-        <translation type="unfinished"/>
+        <translation>%1 の暗号化パーティションのロックを解除するには、パスフレーズを入力してください:</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1038"/>
         <source>Passphrase entry cancelled or empty for %1</source>
-        <translation type="unfinished"/>
+        <translation>%1 のパスフレーズ入力がキャンセルされたか、空になっています</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1044"/>
@@ -182,22 +182,23 @@
         <location filename="../src/mainwindow.cpp" line="1528"/>
         <source>Are you sure this is the MX or antiX Frugal installation location?
 Missing mandatory files in directory: </source>
-        <translation type="unfinished"/>
+        <translation>これがMXまたはantiXのフルーガルインストール先で合っています？
+ディレクトリ内に必須ファイルが欠落しています:</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1592"/>
         <source>Not enough space on the EFI System Partition to copy the kernel and initrd files.</source>
-        <translation type="unfinished"/>
+        <translation>EFI システムパーティションの空き容量が不足しているので、カーネルと initrd ファイルをコピーできません。</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1651"/>
         <source>All fields are required</source>
-        <translation type="unfinished"/>
+        <translation>すべての項目が必須です</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1674"/>
         <source>Could not select ESP</source>
-        <translation type="unfinished"/>
+        <translation>ESP を選択できません</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1692"/>
@@ -245,7 +246,7 @@ Missing mandatory files in directory: </source>
     <message>
         <location filename="../src/mainwindow.cpp" line="212"/>
         <source>Selected file is not in an EFI directory</source>
-        <translation type="unfinished"/>
+        <translation>選択したファイルは EFI ディレクトリ内にありません</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="219"/>
@@ -336,17 +337,17 @@ Missing mandatory files in directory: </source>
     <message>
         <location filename="../src/mainwindow.cpp" line="978"/>
         <source>Failed to open grub.entry file.</source>
-        <translation type="unfinished"/>
+        <translation>grub.entry ファイルを開くことができません。</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1695"/>
         <source>Tool for managing UEFI boot entries</source>
-        <translation type="unfinished"/>
+        <translation>UEFI ブートエントリを管理するためのツール</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1537"/>
         <source>Failed to read grub.entry file.</source>
-        <translation type="unfinished"/>
+        <translation>grub.entry ファイルの読み込みに失敗しました。</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="963"/>
@@ -357,55 +358,55 @@ Missing mandatory files in directory: </source>
     <message>
         <location filename="../src/mainwindow.cpp" line="1556"/>
         <source>Select Frugal Directory</source>
-        <translation type="unfinished"/>
+        <translation>フルーガルディレクトリを選択する</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1563"/>
         <source>No EFI System Partitions found.</source>
-        <translation type="unfinished"/>
+        <translation>EFI システムパーティションが見つかりません。</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1568"/>
         <source>Select EFI System Partition</source>
-        <translation type="unfinished"/>
+        <translation>EFI システムパーティションを選択してください</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1569"/>
         <source>EFI System Partitions:</source>
-        <translation type="unfinished"/>
+        <translation>EFI システムパーティション:</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1579"/>
         <source>No EFI System Partition selected</source>
-        <translation type="unfinished"/>
+        <translation>EFI システムパーティションが選択されていません</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1586"/>
         <source>Could not mount selected EFI System Partition</source>
-        <translation type="unfinished"/>
+        <translation>選択した EFI システムパーティションをマウントできません</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1614"/>
         <location filename="../src/mainwindow.cpp" line="1658"/>
         <source>Could not mount partition. Please make sure you selected the correct partition.</source>
-        <translation type="unfinished"/>
+        <translation>パーティションをマウントできません。正しいパーティションを選択したか確認してください。</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1623"/>
         <source>No directory selected</source>
-        <translation type="unfinished"/>
+        <translation>ディレクトリが選択されていません</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1643"/>
         <location filename="../src/mainwindow.cpp" line="1680"/>
         <source>EFI stub installed successfully.</source>
-        <translation type="unfinished"/>
+        <translation>EFI スタブのインストールが完了しました。</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1645"/>
         <location filename="../src/mainwindow.cpp" line="1682"/>
         <source>Failed to install EFI stub.</source>
-        <translation type="unfinished"/>
+        <translation>EFI スタブのインストールに失敗しました。</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1693"/>
@@ -475,12 +476,12 @@ Missing mandatory files in directory: </source>
     <message>
         <location filename="../src/about.cpp" line="126"/>
         <source>Error: Changelog file is missing.</source>
-        <translation type="unfinished"/>
+        <translation>エラー: Changlog ファイルが見つかりません。</translation>
     </message>
     <message>
         <location filename="../src/about.cpp" line="128"/>
         <source>Error: Required utility &apos;zless&apos; is missing.</source>
-        <translation type="unfinished"/>
+        <translation>エラー: 必要なユーティリティ「zless」が見つかりません。</translation>
     </message>
     <message>
         <location filename="../src/about.cpp" line="135"/>
@@ -490,7 +491,7 @@ Missing mandatory files in directory: </source>
     <message>
         <location filename="../src/main.cpp" line="85"/>
         <source>uefi-manager is a tool for managing UEFI boot entries</source>
-        <translation type="unfinished"/>
+        <translation>UEFI マネージャは、UEFI ブートエントリの管理ツールです</translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="88"/>
@@ -511,7 +512,7 @@ Missing mandatory files in directory: </source>
     <message>
         <location filename="../src/main.cpp" line="96"/>
         <source>This system doesn&apos;t seem to support UEFI, or was not booted in UEFI mode. Exiting.</source>
-        <translation type="unfinished"/>
+        <translation>このシステムは UEFI をサポートしていないか、または UEFI モードで起動していなかったようです。終了します。</translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="107"/>

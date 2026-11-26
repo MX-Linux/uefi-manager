@@ -51,7 +51,7 @@
     <message>
         <location filename="../src/mainwindow.ui" line="20"/>
         <source>UEFI manager</source>
-        <translation>UEFI kezelő</translation>
+        <translation>UEFI Kezelő</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.ui" line="41"/>
@@ -502,7 +502,7 @@ Szükséges fájlok hiányoznak a könyvtárban:</translation>
         <location filename="../src/main.cpp" line="66"/>
         <location filename="../src/main.cpp" line="95"/>
         <source>UEFI Manager</source>
-        <translation>UEFI kezelő</translation>
+        <translation>UEFI Kezelő</translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="89"/>

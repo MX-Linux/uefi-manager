@@ -138,7 +138,7 @@
         <location filename="../src/mainwindow.cpp" line="954"/>
         <location filename="../src/mainwindow.cpp" line="1714"/>
         <source>Next</source>
-        <translation>Следующий</translation>
+        <translation>Далее</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.ui" line="503"/>

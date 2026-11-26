@@ -1,3 +1,21 @@
+uefi-manager (26.11) mx; urgency=medium
+
+  * Preserve existing boot entries during kernel installs and reinstalls.
+    Use the matching initramfs and include available processor microcode.
+  * Fix Debian kernel sorting and keep edited boot options when switching
+    kernels.
+  * Show the correct boot timeout and keep excluded entries out of the
+    boot order when rearranging it.
+  * Honor cancelled prompts, warn about loaders outside the EFI System
+    Partition, and fix crashes when editing boot entries.
+  * Mount the selected partition even when clones share an ID. Warn on
+    exit if a partition remains mounted or unlocked.
+  * Reject unsafe device paths and prevent multiple instances from
+    running at once.
+  * Allow --help and --version to run without a graphical session.
+
+ -- Adrian <adrian@mxlinux.org>  Thu, 26 Nov 2026 01:40:58 -0500
+
 uefi-manager (26.07.1) mx; urgency=medium
 
   * Require administrator authentication for all privileged UEFI Manager
