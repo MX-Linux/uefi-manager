@@ -472,7 +472,7 @@ void MainWindow::tabWidgetCurrentChanged()
     return bootMountPoint;
 }
 
-bool MainWindow::copyKernel()
+bool MainWindow::copyKernel(QStringList *installedUcode)
 {
     if (espMountPoint.isEmpty() || loaderSubDir.isEmpty()) {
         qWarning() << "ESP mount point or loader directory is empty.";
@@ -519,6 +519,9 @@ bool MainWindow::copyKernel()
             qWarning() << "Failed to copy file:" << file << "to" << targetFile;
             return false;
         }
+        if (file.endsWith("ucode.img")) {
+            installedUcode->append(targetFiles.at(i).mid(1));
+        }
     }
 
     qInfo() << "Kernel and initrd files copied successfully to" << targetPath;
@@ -527,7 +530,8 @@ bool MainWindow::copyKernel()
 
 bool MainWindow::installEfiStub(const QString &esp)
 {
-    if (esp.isEmpty() || !copyKernel()) {
+    QStringList installedUcode;
+    if (esp.isEmpty() || !copyKernel(&installedUcode)) {
         return false;
     }
 
@@ -547,22 +551,14 @@ bool MainWindow::installEfiStub(const QString &esp)
     args << "--disk" << disk << "--part" << part << "--create"
          << "--label" << entryName << "--loader" << efiDir + "\\vmlinuz" << "--unicode";
 
-    const QString espPath = espMountPoint + "/EFI/" + loaderSubDir;
-
-    const QString initrdEfi = "initrd=" + efiDir + "\\initrd.img";
-    const QString amdUcodeEfi = "initrd=" + efiDir + "\\amducode.img";
-    const QString intUcodeEfi = "initrd=" + efiDir + "\\intucode.img";
-
-    const QString amdUcode = QString("%1/amducode.img").arg(espPath);
-    const QString intUcode = QString("%1/intucode.img").arg(espPath);
-
-    QString initrd = !QFile::exists(amdUcode) ? "" : amdUcodeEfi;
-
-    if (QFile::exists(intUcode)) {
-        initrd += initrd.isEmpty() ? intUcodeEfi : (" " + intUcodeEfi);
+    // Microcode must load before the initrd. Use what copyKernel() installed: the ESP is often mounted
+    // umask=0077, so this unprivileged process can't check the files there itself.
+    QStringList initrds;
+    for (const QString &ucode : std::as_const(installedUcode)) {
+        initrds << "initrd=" + efiDir + "\\" + ucode;
     }
-
-    initrd += initrd.isEmpty() ? initrdEfi : (" " + initrdEfi);
+    initrds << "initrd=" + efiDir + "\\initrd.img";
+    const QString initrd = initrds.join(' ');
 
     QString bootOptions;
     if (isFrugal) {

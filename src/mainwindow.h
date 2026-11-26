@@ -114,7 +114,7 @@ private:
     [[nodiscard]] QString selectESP();
     [[nodiscard]] QString selectFrugalDirectory(const QString &part);
     [[nodiscard]] bool checkSizeEsp();
-    [[nodiscard]] bool copyKernel();
+    [[nodiscard]] bool copyKernel(QStringList *installedUcode);
     [[nodiscard]] bool installEfiStub(const QString &esp);
     [[nodiscard]] bool isLuks(const QString &part);
     [[nodiscard]] bool readGrubEntry();
