@@ -98,9 +98,22 @@ bool Cmd::proc(const QString &cmd, const QStringList &args, QString *output, con
 
     start(cmd, args);
 
-    if (input && !input->isEmpty()) {
-        waitForStarted();
-        write(*input);
+    // A start failure reported before loop.exec() (synchronously, or inside waitForStarted()) has
+    // already called loop.quit(), which doesn't stop a loop that hasn't started, so return here
+    if (input && !input->isEmpty() && !processError) {
+        if (waitForStarted()) {
+            write(*input);
+        } else if (!processError) { // Timed out without an error signal
+            processError = true;
+            kill();
+            waitForFinished();
+        }
+    }
+    if (processError) {
+        disconnect(doneConn);
+        disconnect(errorConn);
+        qWarning() << "Process error:" << errorString();
+        return false;
     }
     closeWriteChannel();
     // Hold back clicks and keys until the command finishes: callers keep pointers to widgets that
