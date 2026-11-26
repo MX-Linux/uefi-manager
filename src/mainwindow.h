@@ -49,6 +49,8 @@ class MainWindow : public QDialog
 public:
     explicit MainWindow(const QCommandLineParser &argParser, QWidget *parent = nullptr);
     ~MainWindow() override;
+    // True when started with --frugal and the user declined the install, so the window shouldn't open
+    [[nodiscard]] bool frugalInstallDeclined() const { return frugalDeclined; }
     void centerWindow();
     void setup();
 
@@ -74,6 +76,7 @@ private:
     QString kernelRootDir;
     QString autoKernelOptions;
     bool fillingKernelList = false;
+    bool frugalDeclined = false;
     QString frugalDir;
     QString rootDrive;
     QString rootPartition;
@@ -141,7 +144,7 @@ private:
     QStringList getEspDevicePaths();
     void listDevices();
     void loadStubOption();
-    void promptFrugalStubInstall();
+    [[nodiscard]] bool promptFrugalStubInstall();
     void readBootEntries(QListWidget *listEntries, QLabel *textTimeout, QLabel *textBootNext, QLabel *textBootCurrent,
                          QStringList *bootorder);
     void refreshEntries();

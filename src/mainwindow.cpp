@@ -87,7 +87,10 @@ MainWindow::MainWindow(const QCommandLineParser &argParser, QWidget *parent)
 
     if (argParser.isSet("frugal")) {
         qDebug() << "Frugal mode";
-        promptFrugalStubInstall();
+        if (!promptFrugalStubInstall()) {
+            frugalDeclined = true; // main() ends the launch; quit() does nothing before the event loop runs
+            return;
+        }
         ui->tabWidget->setCurrentIndex(Tab::Frugal);
         refreshFrugal();
     }
@@ -806,7 +809,7 @@ void MainWindow::selectKernel(const QString &rootDir)
     }
 }
 
-void MainWindow::promptFrugalStubInstall()
+bool MainWindow::promptFrugalStubInstall()
 {
     int ret = QMessageBox::question(this, tr("UEFI Installer"),
                                     tr("A recent frugal install has been detected. Do you wish to add a UEFI entry "
@@ -815,11 +818,9 @@ void MainWindow::promptFrugalStubInstall()
 
     if (ret == QMessageBox::No) {
         cmd.procElevated(cmd.helperLibraryPath(), {"write_checkfile"});
-        qApp->quit();
-        return;
-    } else {
-        ui->tabWidget->setCurrentIndex(Tab::Frugal);
+        return false;
     }
+    return true;
 }
 
 void MainWindow::readBootEntries(QListWidget *listEntries, QLabel *textTimeout, QLabel *textBootNext,

@@ -144,6 +144,9 @@ int main(int argc, char *argv[])
 
     Log startLog;
     MainWindow w(parser);
+    if (w.frugalInstallDeclined()) {
+        return EXIT_SUCCESS;
+    }
     w.show();
     return QApplication::exec();
 }
