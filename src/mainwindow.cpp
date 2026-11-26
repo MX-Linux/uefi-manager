@@ -1588,13 +1588,25 @@ QString MainWindow::selectESP()
         return {};
     }
 
+    // Check the sources before cleanEspTarget() removes the files an existing entry may boot from
+    const bool isFrugal = ui->tabWidget->currentIndex() == Tab::Frugal;
+    const QString sourceDir = isFrugal ? frugalDir : getBootLocation();
+    const auto kernelFiles = utils::resolveKernelFiles(sourceDir, ui->comboKernel->currentText(), isFrugal);
+    for (const QString &file : {kernelFiles.vmlinuz, kernelFiles.initrd}) {
+        if (!QFile::exists(file)) {
+            qWarning() << "Source file does not exist:" << file;
+            QMessageBox::critical(this, QApplication::applicationDisplayName(),
+                                  tr("Could not find %1. Nothing was changed on the EFI System Partition.").arg(file));
+            return {};
+        }
+    }
+
     if (!checkSizeEsp()) {
         QMessageBox::critical(this, QApplication::applicationDisplayName(),
                               tr("Not enough space on the EFI System Partition to copy the kernel and initrd files."));
         return {};
     }
 
-    const bool isFrugal = ui->tabWidget->currentIndex() == Tab::Frugal;
     const QString subDir = isFrugal ? "/frugal" : "/stub";
     const QString targetPath = espMountPoint + "/EFI/" + distro + subDir;
     cleanEspTarget(targetPath);
