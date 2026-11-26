@@ -51,6 +51,8 @@
 namespace {
 const QRegularExpression bootStripRegex("^Boot|\\*$");
 const QRegularExpression hexIdRegex("^[0-9A-Fa-f]{4}$");
+// Item data flag for firmware entries that exist but are not in BootOrder
+constexpr int NotInBootOrderRole = Qt::UserRole + 1;
 }
 
 // Trying to map all the persistence type to values that make sense
@@ -841,7 +843,8 @@ void MainWindow::refreshEntries()
     auto *listEntries = new QListWidget(ui->tabManageUefi);
     auto *textIntro = new QLabel(tr("You can use the Up/Down buttons, or drag & drop items to change boot order.\n"
                                     "- Items are listed in the boot order.\n"
-                                    "- Grayed out lines are inactive."),
+                                    "- Grayed out lines are inactive.\n"
+                                    "- Italic lines are not in the boot order."),
                                  ui->tabManageUefi);
 
     auto createButton = [&](const QString &text, const QString &iconName) {
@@ -1082,6 +1085,17 @@ void MainWindow::sortUefiBootOrder(const QStringList &order, QListWidget *list)
         list->takeItem(list->row(item));
         list->insertItem(index, item);
         ++index;
+    }
+
+    // The remaining entries were left out of BootOrder on purpose (e.g. efibootmgr --create-only).
+    // Flag them so saving a new order doesn't add them to the automatic boot sequence.
+    for (int row = index; row < list->count(); ++row) {
+        auto *item = list->item(row);
+        item->setData(NotInBootOrderRole, true);
+        item->setToolTip(tr("Not in the boot order"));
+        QFont font = item->font();
+        font.setItalic(true);
+        item->setFont(font);
     }
 
     list->setCurrentRow(0);
@@ -1773,11 +1787,17 @@ bool MainWindow::saveBootOrder(const QListWidget *list)
     QStringList orderList;
     orderList.reserve(list->count());
     for (int i = 0; i < list->count(); ++i) {
+        if (list->item(i)->data(NotInBootOrderRole).toBool()) {
+            continue;
+        }
         QString item = list->item(i)->text().section(' ', 0, 0);
         item.remove(bootStripRegex);
         if (item.contains(hexIdRegex)) {
             orderList.append(item);
         }
+    }
+    if (orderList.isEmpty()) {
+        return true;
     }
 
     const QString order = orderList.join(',');
