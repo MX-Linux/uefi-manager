@@ -14,6 +14,7 @@ private slots:
     void sortKernelVersions_unmatchedFallback();
     void sortKernelVersions_singleElement();
     void sortKernelVersions_empty();
+    void sortKernelVersions_abiRevision();
 
     void extractDisk_sata();
     void extractDisk_nvme();
@@ -127,6 +128,16 @@ void TestUtils::sanitizePathComponent()
     QFETCH(QString, input);
     QFETCH(QString, expected);
     QCOMPARE(utils::sanitizePathComponent(input, "Linux"), expected);
+}
+
+void TestUtils::sortKernelVersions_abiRevision()
+{
+    // Debian ABI revisions must compare numerically: -10 is newer than -9
+    const QStringList input = {"vmlinuz-6.1.0-9-amd64", "vmlinuz-6.1.0-10-amd64", "vmlinuz-6.1.0-2-amd64"};
+    QCOMPARE(utils::sortKernelVersions(input, true),
+             QStringList({"vmlinuz-6.1.0-10-amd64", "vmlinuz-6.1.0-9-amd64", "vmlinuz-6.1.0-2-amd64"}));
+    QCOMPARE(utils::sortKernelVersions(input, false),
+             QStringList({"vmlinuz-6.1.0-2-amd64", "vmlinuz-6.1.0-9-amd64", "vmlinuz-6.1.0-10-amd64"}));
 }
 
 static void touchFiles(const QString &dir, const QStringList &names)

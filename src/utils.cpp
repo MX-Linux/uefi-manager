@@ -75,7 +75,21 @@ QStringList sortKernelVersions(const QStringList &kernelFiles, bool reverse)
             return reverse ? patchA > patchB : patchA < patchB;
         }
 
-        return reverse ? matchA.captured(4) > matchB.captured(4) : matchA.captured(4) < matchB.captured(4);
+        // Suffix such as Debian's ABI revision ("-9" in 6.1.0-9-amd64): compare a leading number
+        // numerically, so -10 sorts above -9, and anything else as text
+        static const QRegularExpression revisionRegex(R"(^-(\d+))");
+        const QString suffixA = matchA.captured(4);
+        const QString suffixB = matchB.captured(4);
+        const QRegularExpressionMatch revisionA = revisionRegex.match(suffixA);
+        const QRegularExpressionMatch revisionB = revisionRegex.match(suffixB);
+        if (revisionA.hasMatch() && revisionB.hasMatch()) {
+            const qulonglong numberA = revisionA.captured(1).toULongLong();
+            const qulonglong numberB = revisionB.captured(1).toULongLong();
+            if (numberA != numberB) {
+                return reverse ? numberA > numberB : numberA < numberB;
+            }
+        }
+        return reverse ? suffixA > suffixB : suffixA < suffixB;
     };
 
     QStringList sortedList = kernelFiles;
