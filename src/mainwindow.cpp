@@ -571,19 +571,30 @@ QString MainWindow::mountPartition(QString part)
         return "/";
     }
 
-    // allow LABEL= UUID= PARTUUID=, PARTLABEL etc  as "part" argument
-    // convert to /dev/devicename reliable if partion given as LABEL= UUID= PARTUUID= etc.
-    // get UUID= if any of /dev/... formats are given
-    QString uuid;
-    if (!part.contains("=")) {
+    // Resolve identifiers (UUID=, LABEL=, PARTUUID=, PARTLABEL=, /dev/disk/by-*) to a device, but keep
+    // an explicit device as given: two partitions can share a UUID (e.g. cloned ESPs), and resolving
+    // one back from its UUID could pick the other.
+    if (part.contains('=')) {
+        QString device;
+        if (!cmd.procAsRoot("blkid", {"--list-one", "--output", "device", "--match-token", part}, &device, nullptr)
+            || device.trimmed().isEmpty()) {
+            qWarning() << "Could not find a device for" << part;
+            return {};
+        }
+        part = device.trimmed();
+    } else {
         if (!part.startsWith("/dev/")) {
             part = "/dev/" + part;
         }
-        cmd.procAsRoot("blkid", {"--output", "value", "--match-tag", "UUID", part}, &uuid, nullptr);
-        part = "UUID=" + uuid.trimmed();
+        if (part.startsWith("/dev/disk/")) {
+            const QString device = QFileInfo(part).canonicalFilePath();
+            if (device.isEmpty()) {
+                qWarning() << "Could not find a device for" << part;
+                return {};
+            }
+            part = device;
+        }
     }
-    // get /dev/devicename  from token UUID, LABEL=, PARTUUID=, PARTLABEL= and /dev/disk-by/...
-    cmd.procAsRoot("blkid", {"--list-one", "--output", "device", "--match-token", part}, &part, nullptr);
 
     QString mountDir;
     // use TARGET to get mountpoint with spaces
