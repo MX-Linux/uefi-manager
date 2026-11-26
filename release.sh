@@ -167,6 +167,35 @@ update_aur_package() {
         exit 1
     fi
 
+    # Get the tarball checksum before changing anything: a recipe without the real digest fails
+    # source verification, so stop here if the download doesn't work
+    print_step "Calculating tarball checksum..."
+    local tarball_url="https://github.com/MX-Linux/uefi-manager/archive/refs/tags/${version}.tar.gz"
+    # Download tarball and calculate checksum (with retry)
+    local checksum=""
+    local retries=5
+    for i in $(seq 1 $retries); do
+        print_step "Attempting to download tarball (attempt $i/$retries)..."
+        if curl -L --fail --silent --show-error "$tarball_url" -o "/tmp/${version}.tar.gz" 2>/dev/null; then
+            checksum=$(sha256sum "/tmp/${version}.tar.gz" | cut -d' ' -f1)
+            if [ -n "$checksum" ]; then
+                print_success "Checksum calculated: ${checksum:0:16}..."
+                break
+            fi
+        fi
+
+        if [ "$i" -lt "$retries" ]; then
+            print_warning "Failed to download tarball, waiting 5 seconds before retry..."
+            sleep 5
+        fi
+    done
+
+    if [ -z "$checksum" ]; then
+        print_error "Failed to download tarball after $retries attempts"
+        print_warning "AUR package left unchanged; run the script again once the tarball is available"
+        exit 1
+    fi
+
     # Change to aur directory
     cd "$AUR_DIR"
 
@@ -208,40 +237,14 @@ update_aur_package() {
         exit 1
     fi
 
-    # Convert to tarball source and calculate checksum
-    print_step "Converting to tarball source and calculating checksum..."
-    local tarball_url="https://github.com/MX-Linux/uefi-manager/archive/refs/tags/${version}.tar.gz"
+    # Convert to tarball source
+    print_step "Converting to tarball source..."
 
     # Update source in PKGBUILD
     sed -i "s|source=.*|source=(\"${tarball_url}\")|" PKGBUILD
 
     # Remove git from makedepends if present
     sed -i '/makedepends=.*git/d' PKGBUILD
-
-    # Download tarball and calculate checksum (with retry)
-    local checksum=""
-    local retries=5
-    for i in $(seq 1 $retries); do
-        print_step "Attempting to download tarball (attempt $i/$retries)..."
-        if curl -L --fail --silent --show-error "$tarball_url" -o "/tmp/${version}.tar.gz" 2>/dev/null; then
-            checksum=$(sha256sum "/tmp/${version}.tar.gz" | cut -d' ' -f1)
-            if [ -n "$checksum" ]; then
-                print_success "Checksum calculated: ${checksum:0:16}..."
-                break
-            fi
-        fi
-
-        if [ "$i" -lt "$retries" ]; then
-            print_warning "Failed to download tarball, waiting 5 seconds before retry..."
-            sleep 5
-        fi
-    done
-
-    if [ -z "$checksum" ]; then
-        print_error "Failed to download tarball after $retries attempts"
-        print_warning "You may need to calculate checksum manually later"
-        checksum="PLACEHOLDER_NEEDS_ACTUAL_CHECKSUM"
-    fi
 
     # Update checksum in PKGBUILD
     sed -i "s/sha256sums=.*/sha256sums=('${checksum}')/" PKGBUILD
