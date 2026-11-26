@@ -37,6 +37,9 @@
 #include "common.h"
 #include "log.h"
 #include "mainwindow.h"
+#include <fcntl.h>
+#include <sys/file.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #ifndef VERSION
@@ -44,6 +47,7 @@
 #endif
 
 bool isUefi();
+bool acquireInstanceLock();
 
 int main(int argc, char *argv[])
 {
@@ -131,6 +135,13 @@ int main(int argc, char *argv[])
     qDebug().noquote() << QApplication::applicationName() << QObject::tr("version:")
                        << QApplication::applicationVersion();
 
+    // One instance at a time: temporary mounts share one base directory, and cleanup on exit sweeps it
+    if (!acquireInstanceLock()) {
+        QMessageBox::critical(nullptr, QObject::tr("UEFI Manager"),
+                              QObject::tr("UEFI Manager is already running."));
+        return EXIT_FAILURE;
+    }
+
     Log startLog;
     MainWindow w(parser);
     w.show();
@@ -141,4 +152,27 @@ bool isUefi()
 {
     QDir dir("/sys/firmware/efi/efivars");
     return dir.exists() && !dir.entryList(QDir::NoDotAndDotDot | QDir::AllEntries).isEmpty();
+}
+
+// Hold an exclusive lock for the life of the process. flock() is released by the kernel when the
+// process exits, so a crashed instance never leaves a stale lock. The file may belong to another
+// user, and fs.protected_regular refuses O_CREAT on it in /tmp, so fall back to opening it as is.
+bool acquireInstanceLock()
+{
+    const char *path = "/tmp/uefi-manager.lock";
+    int fd = open(path, O_RDONLY | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0644);
+    if (fd != -1) {
+        fchmod(fd, 0644); // Ignore the umask so other users can open it too; fails harmlessly if not ours
+    } else {
+        fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    }
+    if (fd == -1) {
+        qWarning() << "Could not open instance lock" << path;
+        return true; // Don't block the user over a lock file we can't use
+    }
+    if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
+        close(fd);
+        return false;
+    }
+    return true; // Keep fd open until the process exits
 }
