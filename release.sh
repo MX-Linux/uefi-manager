@@ -243,8 +243,8 @@ update_aur_package() {
     # Update source in PKGBUILD
     sed -i "s|source=.*|source=(\"${tarball_url}\")|" PKGBUILD
 
-    # Remove git from makedepends if present
-    sed -i '/makedepends=.*git/d' PKGBUILD
+    # Remove git from makedepends if present, keeping the other build dependencies
+    sed -i -E "/^makedepends=/{s/([( ])(git|'git'|\"git\")( |\))/\1\3/;s/\( +/(/;s/ +\)/)/;s/  +/ /g}" PKGBUILD
 
     # Update checksum in PKGBUILD
     sed -i "s/sha256sums=.*/sha256sums=('${checksum}')/" PKGBUILD
