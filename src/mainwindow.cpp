@@ -40,6 +40,7 @@
 #include <QJsonObject>
 #include <QScopedValueRollback>
 #include <QScreen>
+#include <QSet>
 #include <QStandardPaths>
 #include <QStorageInfo>
 #include <QTextStream>
@@ -965,6 +966,10 @@ void MainWindow::refreshEntries()
     QStringList bootorder;
     readBootEntries(listEntries, textTimeout, textBootNext, textBootCurrent, &bootorder);
     sortUefiBootOrder(bootorder, listEntries);
+    if (bootorder.isEmpty() && listEntries->count() > 0) {
+        textIntro->setText(textIntro->text() + '\n'
+                           + tr("- No boot order is set yet: moving an entry creates one from all listed entries."));
+    }
 
     listEntries->setDragDropMode(QAbstractItemView::InternalMove);
     connect(listEntries->model(), &QAbstractItemModel::rowsMoved, this, [this, listEntries]() {
@@ -1124,7 +1129,13 @@ void MainWindow::sortUefiBootOrder(const QStringList &order, QListWidget *list)
     }
 
     int index = 0;
+    QSet<QString> placed;
     for (const auto &orderItem : order) {
+        // A duplicated ID would move the same row twice and count one extra row as a member
+        if (placed.contains(orderItem.toUpper())) {
+            continue;
+        }
+        placed.insert(orderItem.toUpper());
         auto items = list->findItems("Boot" + orderItem, Qt::MatchStartsWith);
         if (items.isEmpty()) {
             continue;
