@@ -25,6 +25,7 @@
 #include "ui_mainwindow.h"
 #include "utils.h"
 
+#include <QDateTime>
 #include <QDebug>
 #include <QDir>
 #include <QFileDialog>
@@ -34,7 +35,6 @@
 #include <QRegularExpression>
 
 #include <QCollator>
-#include <QCryptographicHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -282,12 +282,14 @@ void MainWindow::clearEntryWidget()
     delete ui->tabManageUefi->layout();
 }
 
-void MainWindow::cleanEspTarget(const QString &targetPath)
+// Undo a failed install: remove the loader directory this install created, and nothing else
+void MainWindow::removeNewLoaderDir()
 {
-    cmd.procAsRoot("rm", {"-f", targetPath + "/vmlinuz",
-                          targetPath + "/initrd.img", targetPath + "/initrd.gz",
-                          targetPath + "/amducode.img", targetPath + "/amducode.gz",
-                          targetPath + "/intucode.img", targetPath + "/intucode.gz"});
+    if (!loaderDirCreated) {
+        return;
+    }
+    cmd.procAsRoot("rm", {"-rf", "--", espMountPoint + "/EFI/" + loaderSubDir});
+    loaderDirCreated = false;
 }
 
 void MainWindow::centerWindow()
@@ -495,13 +497,13 @@ bool MainWindow::copyKernel(QStringList *installedUcode)
 
     const QString targetPath = espMountPoint + "/EFI/" + loaderSubDir;
 
-    // Create target directory if it doesn't exist
-    if (!QDir().exists(targetPath)) {
-        if (!cmd.procAsRoot("mkdir", {"-p", targetPath})) {
-            qWarning() << "Failed to create directory:" << targetPath;
-            return false;
-        }
+    // Create the parents as needed, but the entry's own directory must be new (mkdir without -p fails if
+    // it exists), so this install never touches files another entry boots
+    if (!cmd.procAsRoot("mkdir", {"-p", QFileInfo(targetPath).path()}) || !cmd.procAsRoot("mkdir", {targetPath})) {
+        qWarning() << "Failed to create directory:" << targetPath;
+        return false;
     }
+    loaderDirCreated = true;
 
     // Copy kernel and initrd files
     const QString sourceDir = isFrugal ? frugalDir : [this]() {
@@ -524,11 +526,13 @@ bool MainWindow::copyKernel(QStringList *installedUcode)
 
         if (!QFile::exists(file) && !file.endsWith("ucode.img")) {
             qWarning() << "Source file does not exist:" << file;
+            removeNewLoaderDir();
             return false;
         }
 
         if (!cmd.procAsRoot("cp", {file, targetFile})) {
             qWarning() << "Failed to copy file:" << file << "to" << targetFile;
+            removeNewLoaderDir();
             return false;
         }
         if (file.endsWith("ucode.img")) {
@@ -552,6 +556,7 @@ bool MainWindow::installEfiStub(const QString &esp)
     QString part = partMatch.hasMatch() ? partMatch.captured() : QString();
 
     if (disk.isEmpty() || part.isEmpty()) {
+        removeNewLoaderDir();
         return false;
     }
 
@@ -582,8 +587,10 @@ bool MainWindow::installEfiStub(const QString &esp)
     }
 
     if (!cmd.procAsRoot("efibootmgr", args << bootOptions)) {
+        removeNewLoaderDir();
         return false;
     }
+    loaderDirCreated = false; // The new entry boots from it now
     return true;
 }
 
@@ -1683,7 +1690,7 @@ QString MainWindow::selectESP()
         return {};
     }
 
-    // Check the sources before cleanEspTarget() removes the files an existing entry may boot from
+    // Check the sources before creating anything on the ESP
     const bool isFrugal = ui->tabWidget->currentIndex() == Tab::Frugal;
     const QString sourceDir = isFrugal ? frugalDir : getBootLocation();
     const auto kernelFiles = utils::resolveKernelFiles(sourceDir, ui->comboKernel->currentText(), isFrugal);
@@ -1703,36 +1710,20 @@ QString MainWindow::selectESP()
     }
 
     loaderSubDir = loaderSubPath();
-    cleanEspTarget(espMountPoint + "/EFI/" + loaderSubDir);
+    loaderDirCreated = false;
     return selectedEsp;
 }
 
-// Directory under the ESP's EFI folder that holds this entry's kernel and initrd. It combines the entry
-// name with a hash of the source installation and full name, so installing another system of the same distribution
-// (or the same one under a new name) can't replace files an existing entry boots. Installing again from
-// the same source under the same name updates that entry's files.
+// Directory under the ESP's EFI folder for this install's kernel and initrd. Every install, including
+// a reinstall under the same name, gets a new directory: efibootmgr --create always adds a new entry, so
+// the previous entry keeps booting its own files even if this install fails part way.
 QString MainWindow::loaderSubPath()
 {
     const bool isFrugal = ui->tabWidget->currentIndex() == Tab::Frugal;
-    QString identity;
-    if (isFrugal) {
-        identity = (options.uuid.isEmpty() && options.bdir.isEmpty()) ? frugalDir : options.uuid + '/' + options.bdir;
-    } else {
-        QString device = ui->comboPartitionStub->currentText().section(' ', 0, 0);
-        if (!device.startsWith("/dev/")) {
-            device.prepend("/dev/");
-        }
-        QString uuid;
-        cmd.proc("lsblk", {"--nodeps", "--noheadings", "--output", "UUID", device}, &uuid, nullptr, QuietMode::Yes);
-        identity = uuid.trimmed().isEmpty() ? device : uuid.trimmed();
-    }
     const QString label = isFrugal ? ui->textUefiEntryFrugal->text() : ui->textEntryName->text();
     const QString name = utils::sanitizePathComponent(label.trimmed().left(32), "entry");
-    // Hash the full label too: the readable name is shortened and sanitized, so distinct labels such
-    // as "MX 6.1" and "MX_6.1" share it
-    const QString hash
-        = QCryptographicHash::hash((identity + '\n' + label).toUtf8(), QCryptographicHash::Sha1).toHex().left(8);
-    return QString("%1/%2/%3-%4").arg(distro, isFrugal ? "frugal" : "stub", name, hash);
+    const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss");
+    return QString("%1/%2/%3-%4").arg(distro, isFrugal ? "frugal" : "stub", name, stamp);
 }
 
 void MainWindow::pushNextClicked()

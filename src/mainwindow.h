@@ -71,6 +71,7 @@ private:
     int cachedTimeout = 0;
     QString espMountPoint;
     QString loaderSubDir; // Entry's directory under the ESP's EFI folder, set by selectESP()
+    bool loaderDirCreated = false; // This install created loaderSubDir, so a failure may remove it
     // Where selectKernel() found the kernels, and the options it filled in, for refreshing them per kernel
     QString kernelBootDir;
     QString kernelRootDir;
@@ -131,7 +132,7 @@ private:
     void checkDoneStub();
     void kernelSelectionChanged(const QString &kernel);
     void clearEntryWidget();
-    void cleanEspTarget(const QString &targetPath);
+    void removeNewLoaderDir();
     void filterDrivePartitions();
     void getKernelOptions(const QString &mountPoint, const QString &rootDir, const QString &kernel);
     QString determineKernelDir(const QString &bootDir, const QString &rootDir);
