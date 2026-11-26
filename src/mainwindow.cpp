@@ -40,6 +40,7 @@
 #include <QJsonObject>
 #include <QScopedValueRollback>
 #include <QScreen>
+#include <QStandardPaths>
 #include <QStorageInfo>
 #include <QTextStream>
 #include <QTimer>
@@ -587,7 +588,11 @@ bool MainWindow::installEfiStub(const QString &esp)
 
 bool MainWindow::isLuks(const QString &part)
 {
-    return cmd.procAsRoot("cryptsetup", {"isLuks", part});
+    // Probe with blkid (util-linux, always installed): if cryptsetup is missing, "cryptsetup isLuks" exits 127,
+    // which counts as an elevation failure and blocks even plain partitions from mounting
+    QString type;
+    return cmd.procAsRoot("blkid", {"--output", "value", "--match-tag", "TYPE", part}, &type, nullptr)
+           && type.trimmed() == "crypto_LUKS";
 }
 
 QString MainWindow::mountPartition(QString part)
@@ -1066,6 +1071,14 @@ void MainWindow::loadStubOption()
 
 QString MainWindow::openLuks(const QString &partition)
 {
+    if (QStandardPaths::findExecutable("cryptsetup", {"/usr/sbin", "/sbin", "/usr/bin", "/bin"}).isEmpty()) {
+        QMessageBox::critical(this, tr("Error"),
+                              tr("%1 is encrypted, but cryptsetup is not installed. Install the cryptsetup package "
+                                 "to unlock it.")
+                                  .arg(partition));
+        return {};
+    }
+
     QString uuid;
     if (!cmd.procAsRoot("cryptsetup", {"luksUUID", partition}, &uuid) || uuid.trimmed().isEmpty()) {
         QMessageBox::critical(this, tr("Error"), tr("Could not retrieve UUID for %1").arg(partition));
