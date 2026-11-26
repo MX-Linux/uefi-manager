@@ -119,7 +119,7 @@ private:
     static void sortUefiBootOrder(const QStringList &order, QListWidget *list);
     static void toggleUefiActive(QListWidget *listEntries);
     void addDevToList();
-    void addUefiEntry(QListWidget *listEntries, QWidget *dialogUefi);
+    void addUefiEntry(QWidget *dialogUefi);
     void checkDoneStub();
     void clearEntryWidget();
     void cleanEspTarget(const QString &targetPath);

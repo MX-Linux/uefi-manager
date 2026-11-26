@@ -145,7 +145,7 @@ QStringList MainWindow::getEspDevicePaths()
     return paths;
 }
 
-void MainWindow::addUefiEntry(QListWidget *listEntries, QWidget *dialogUefi)
+void MainWindow::addUefiEntry(QWidget *dialogUefi)
 {
     // Mount all ESPs
     const QStringList partList = getEspDevicePaths();
@@ -235,17 +235,15 @@ void MainWindow::addUefiEntry(QListWidget *listEntries, QWidget *dialogUefi)
         QMessageBox::critical(dialogUefi, tr("Error"), tr("Selected file is not in an EFI directory"));
         return;
     }
-    QString out;
-    cmd.procAsRoot("efibootmgr", {"-c", "-L", name, "-d", disk, "-p", partition, "-l", loaderPath}, &out);
-
-    if (cmd.exitCode() != 0) {
+    // Check the result itself: if elevation already failed, no process runs and exitCode() is stale
+    if (!cmd.procAsRoot("efibootmgr", {"-c", "-L", name, "-d", disk, "-p", partition, "-l", loaderPath})) {
         QMessageBox::critical(dialogUefi, tr("Error"), tr("Something went wrong, could not add entry."));
         return;
     }
 
-    QStringList outList = out.split('\n', Qt::SkipEmptyParts);
-    listEntries->insertItem(0, outList.constLast());
-    emit listEntries->itemSelectionChanged();
+    // Reload from firmware, which now has the entry first in BootOrder. Deferred because the
+    // rebuild deletes the button whose click handler is running.
+    QTimer::singleShot(0, this, &MainWindow::refreshEntries);
 }
 
 void MainWindow::checkDoneStub()
@@ -895,7 +893,7 @@ void MainWindow::refreshEntries()
     connect(pushTimeout, &QPushButton::clicked, this,
             [this, textTimeout]() { Cmd::resetElevation(); setUefiTimeout(ui->tabManageUefi, textTimeout); });
     connect(pushAddEntry, &QPushButton::clicked, this,
-            [this, listEntries]() { Cmd::resetElevation(); addUefiEntry(listEntries, ui->tabManageUefi); });
+            [this]() { Cmd::resetElevation(); addUefiEntry(ui->tabManageUefi); });
     connect(pushBootNext, &QPushButton::clicked, this,
             [listEntries, textBootNext]() { Cmd::resetElevation(); setUefiBootNext(listEntries, textBootNext); });
     connect(pushRemove, &QPushButton::clicked, this,
