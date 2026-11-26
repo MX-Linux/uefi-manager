@@ -840,8 +840,13 @@ void MainWindow::readBootEntries(QListWidget *listEntries, QLabel *textTimeout, 
             }
             listEntries->addItem(listItem);
         } else if (item.startsWith("Timeout:")) {
-            cachedTimeout = item.section(' ', 1).trimmed().toInt();
-            textTimeout->setText(tr("Timeout: %1 seconds").arg(cachedTimeout));
+            // efibootmgr prints "Timeout: 30 seconds"
+            bool ok = false;
+            const int timeout = item.section(' ', 1, 1).toInt(&ok);
+            if (ok) {
+                cachedTimeout = timeout;
+                textTimeout->setText(tr("Timeout: %1 seconds").arg(cachedTimeout));
+            }
         } else if (item.startsWith("BootNext:")) {
             textBootNext->setText(tr("Boot Next: %1").arg(item.section(' ', 1).trimmed()));
         } else if (item.startsWith("BootCurrent:")) {
