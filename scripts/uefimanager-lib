@@ -71,9 +71,17 @@ cleanup_temp() {
 
 copy_log() {
     local dest="/var/log/uefi-manager.log"
-    # The log arrives on stdin; cap it so a runaway log can't fill /var/log
-    head -c 10M > "$dest"
-    chmod 644 "$dest"
+    local tmp
+    tmp="$(mktemp "${dest}.XXXXXX")"
+    # The log arrives on stdin; cap it so a runaway log can't fill /var/log. Replace the archive only
+    # with a complete, non-empty log, so an empty or failed read never truncates it.
+    if ! head -c 10M > "$tmp" || [[ ! -s "$tmp" ]]; then
+        rm -f -- "$tmp"
+        echo "Error: no log data received" >&2
+        return 1
+    fi
+    chmod 644 "$tmp"
+    mv -f -- "$tmp" "$dest"
 }
 
 write_checkfile() {

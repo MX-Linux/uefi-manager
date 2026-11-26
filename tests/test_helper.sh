@@ -71,12 +71,18 @@ echo "=== Lib action tests ==="
 expect_err_msg "lib without subcommand" "lib requires a subcommand" lib
 expect_err_msg "invalid lib subcommand" "lib subcommand is not allowed" lib bad_subcommand
 
-stderr="$("$HELPER" lib copy_log </dev/null 2>&1 || true)"
-if [[ "$stderr" == *"lib subcommand is not allowed"* ]]; then
-    echo "FAIL: allowed lib subcommand rejected" >&2
-    ((++FAIL))
+# As root this would reach the host's installed uefimanager-lib, whose copy_log may predate the
+# empty-input check and truncate /var/log/uefi-manager.log, so only run it unprivileged.
+if ((EUID == 0)); then
+    echo "SKIP: allowed lib subcommand dispatch (running as root)"
 else
-    ((++PASS))
+    stderr="$("$HELPER" lib copy_log </dev/null 2>&1 || true)"
+    if [[ "$stderr" == *"lib subcommand is not allowed"* ]]; then
+        echo "FAIL: allowed lib subcommand rejected" >&2
+        ((++FAIL))
+    else
+        ((++PASS))
+    fi
 fi
 
 echo "=== Single-string shell commands are rejected ==="
