@@ -46,6 +46,7 @@
 #include <QTimer>
 
 #include <functional>
+#include <sys/stat.h>
 
 #include "about.h"
 #include "cmd.h"
@@ -604,9 +605,9 @@ QString MainWindow::mountPartition(QString part)
         return "/";
     }
 
-    // Resolve identifiers (UUID=, LABEL=, PARTUUID=, PARTLABEL=, /dev/disk/by-*) to a device, but keep
-    // an explicit device as given: two partitions can share a UUID (e.g. cloned ESPs), and resolving
-    // one back from its UUID could pick the other.
+    // Resolve identifiers (UUID=, LABEL=, PARTUUID=, PARTLABEL=) to a device, but keep an explicit device
+    // as given: two partitions can share a UUID (e.g. cloned ESPs), and resolving one back from its UUID
+    // could pick the other.
     if (part.contains('=')) {
         QString device;
         if (!cmd.procAsRoot("blkid", {"--list-one", "--output", "device", "--match-token", part}, &device, nullptr)
@@ -619,15 +620,19 @@ QString MainWindow::mountPartition(QString part)
         if (!part.startsWith("/dev/")) {
             part = "/dev/" + part;
         }
-        if (part.startsWith("/dev/disk/")) {
-            const QString device = QFileInfo(part).canonicalFilePath();
-            if (device.isEmpty()) {
-                qWarning() << "Could not find a device for" << part;
-                return {};
-            }
-            part = device;
-        }
     }
+
+    // The path may come from the selected system's fstab, and its name becomes a directory that root
+    // creates and mounts on. Resolve symlinks (/dev/disk/by-*, /dev/mapper/*) and ".." and require a
+    // block device, so the mount directory below can only be a single name under MOUNT_BASE.
+    const QString device = QFileInfo(part).canonicalFilePath();
+    struct stat deviceStat {};
+    if (device.isEmpty() || stat(QFile::encodeName(device).constData(), &deviceStat) != 0
+        || !S_ISBLK(deviceStat.st_mode)) {
+        qWarning() << "Not a block device:" << part;
+        return {};
+    }
+    part = device;
 
     QString mountDir;
     // use TARGET to get mountpoint with spaces
@@ -663,12 +668,8 @@ QString MainWindow::mountPartition(QString part)
         }
     }
 
-    // Reduce to bare device name (e.g. "sda1")
-    if (part.startsWith("/dev/")) {
-        part = part.mid(5);
-    }
-
-    mountDir = MOUNT_BASE + "/" + part;
+    // Name the mount directory after the device's own name (e.g. "sda1", "dm-0")
+    mountDir = MOUNT_BASE + "/" + QFileInfo(part).fileName();
     if (!QDir(mountDir).exists()) {
         if (!cmd.procAsRoot("mkdir", {"-p", mountDir})) {
             return {};
@@ -676,7 +677,7 @@ QString MainWindow::mountPartition(QString part)
         newDirectories.append(mountDir);
     }
 
-    if (!cmd.procAsRoot("mount", {"/dev/" + part, mountDir})) {
+    if (!cmd.procAsRoot("mount", {part, mountDir})) {
         return {};
     }
     newMounts.append(mountDir);
