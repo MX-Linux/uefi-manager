@@ -193,7 +193,12 @@ void MainWindow::addUefiEntry(QListWidget *listEntries, QWidget *dialogUefi)
         return;
     }
 
-    QString name = QInputDialog::getText(dialogUefi, tr("Set name"), tr("Enter the name for the UEFI menu item:"));
+    bool accepted = false;
+    QString name = QInputDialog::getText(dialogUefi, tr("Set name"), tr("Enter the name for the UEFI menu item:"),
+                                         QLineEdit::Normal, {}, &accepted);
+    if (!accepted) {
+        return;
+    }
     if (name.isEmpty()) {
         name = "New entry";
     }
