@@ -103,7 +103,9 @@ bool Cmd::proc(const QString &cmd, const QStringList &args, QString *output, con
         write(*input);
     }
     closeWriteChannel();
-    loop.exec();
+    // Hold back clicks and keys until the command finishes: callers keep pointers to widgets that
+    // user actions (e.g. switching tabs) would rebuild. Qt delivers the held input afterwards.
+    loop.exec(QEventLoop::ExcludeUserInputEvents);
     disconnect(doneConn);
     disconnect(errorConn);
 
