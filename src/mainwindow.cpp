@@ -1708,7 +1708,7 @@ QString MainWindow::selectESP()
 }
 
 // Directory under the ESP's EFI folder that holds this entry's kernel and initrd. It combines the entry
-// name with a hash of the source installation, so installing another system of the same distribution
+// name with a hash of the source installation and full name, so installing another system of the same distribution
 // (or the same one under a new name) can't replace files an existing entry boots. Installing again from
 // the same source under the same name updates that entry's files.
 QString MainWindow::loaderSubPath()
@@ -1728,7 +1728,10 @@ QString MainWindow::loaderSubPath()
     }
     const QString label = isFrugal ? ui->textUefiEntryFrugal->text() : ui->textEntryName->text();
     const QString name = utils::sanitizePathComponent(label.trimmed().left(32), "entry");
-    const QString hash = QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha1).toHex().left(8);
+    // Hash the full label too: the readable name is shortened and sanitized, so distinct labels such
+    // as "MX 6.1" and "MX_6.1" share it
+    const QString hash
+        = QCryptographicHash::hash((identity + '\n' + label).toUtf8(), QCryptographicHash::Sha1).toHex().left(8);
     return QString("%1/%2/%3-%4").arg(distro, isFrugal ? "frugal" : "stub", name, hash);
 }
 
