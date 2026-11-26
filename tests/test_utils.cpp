@@ -18,6 +18,9 @@ private slots:
     void extractDisk_mmc();
     void extractDisk_virtio();
     void extractDisk_wholeDisk();
+
+    void sanitizePathComponent_data();
+    void sanitizePathComponent();
 };
 
 void TestUtils::sortKernelVersions_descending()
@@ -93,6 +96,31 @@ void TestUtils::extractDisk_wholeDisk()
     QCOMPARE(utils::extractDiskFromPartition("sda"), QString("sda"));
     QCOMPARE(utils::extractDiskFromPartition("nvme0n1"), QString("nvme0n1"));
     QCOMPARE(utils::extractDiskFromPartition("mmcblk0"), QString("mmcblk0"));
+}
+
+void TestUtils::sanitizePathComponent_data()
+{
+    QTest::addColumn<QString>("input");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("plain id") << "debian" << "debian";
+    QTest::newRow("mixed case") << "MX" << "MX";
+    QTest::newRow("allowed punctuation") << "open.suse-tw_1" << "open.suse-tw_1";
+    QTest::newRow("space") << "MX Linux" << "MX_Linux";
+    QTest::newRow("slash") << "Debian GNU/Linux" << "Debian_GNU_Linux";
+    QTest::newRow("parent traversal") << "../../etc" << ".._.._etc";
+    QTest::newRow("empty") << "" << "Linux";
+    QTest::newRow("whitespace only") << "   " << "Linux";
+    QTest::newRow("dot") << "." << "Linux";
+    QTest::newRow("dot dot") << ".." << "Linux";
+    QTest::newRow("dots only") << "...." << "Linux";
+}
+
+void TestUtils::sanitizePathComponent()
+{
+    QFETCH(QString, input);
+    QFETCH(QString, expected);
+    QCOMPARE(utils::sanitizePathComponent(input, "Linux"), expected);
 }
 
 QTEST_MAIN(TestUtils)

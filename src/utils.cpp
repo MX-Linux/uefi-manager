@@ -101,4 +101,13 @@ QString extractDiskFromPartition(const QString &partition)
     return match.hasMatch() ? match.captured(1) : partition;
 }
 
+QString sanitizePathComponent(const QString &name, const QString &fallback)
+{
+    static const QRegularExpression unsafeRegex("[^A-Za-z0-9._-]+");
+    static const QRegularExpression dotsOnlyRegex(R"(^\.*$)");
+    QString component = name.trimmed();
+    component.replace(unsafeRegex, "_");
+    return component.contains(dotsOnlyRegex) ? fallback : component;
+}
+
 } // namespace utils

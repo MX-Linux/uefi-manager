@@ -1111,7 +1111,8 @@ QString MainWindow::getDistroName(bool pretty, const QString &mountPoint, const 
     if (distroName.isEmpty()) {
         return "Linux";
     }
-    return distroName;
+    // The non-pretty name becomes a directory under the ESP's EFI folder, so it must be a single safe component
+    return pretty ? distroName : utils::sanitizePathComponent(distroName, "Linux");
 }
 
 [[nodiscard]] QString MainWindow::getMountPoint(const QString &partition)
