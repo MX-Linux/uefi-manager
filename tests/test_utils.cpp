@@ -1,3 +1,5 @@
+#include <QFile>
+#include <QTemporaryDir>
 #include <QTest>
 #include "utils.h"
 
@@ -18,6 +20,10 @@ private slots:
     void extractDisk_mmc();
     void extractDisk_virtio();
     void extractDisk_wholeDisk();
+
+    void resolveKernelFiles_debian();
+    void resolveKernelFiles_archPairs();
+    void resolveKernelFiles_archMissingInitramfs();
 
     void sanitizePathComponent_data();
     void sanitizePathComponent();
@@ -121,6 +127,45 @@ void TestUtils::sanitizePathComponent()
     QFETCH(QString, input);
     QFETCH(QString, expected);
     QCOMPARE(utils::sanitizePathComponent(input, "Linux"), expected);
+}
+
+static void touchFiles(const QString &dir, const QStringList &names)
+{
+    for (const QString &name : names) {
+        QFile file(dir + '/' + name);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+    }
+}
+
+void TestUtils::resolveKernelFiles_debian()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    touchFiles(dir.path(), {"vmlinuz-6.1.0-10-amd64", "initrd.img-6.1.0-10-amd64"});
+    const auto files = utils::resolveKernelFiles(dir.path(), "6.1.0-10-amd64", false);
+    QCOMPARE(files.vmlinuz, dir.path() + "/vmlinuz-6.1.0-10-amd64");
+    QCOMPARE(files.initrd, dir.path() + "/initrd.img-6.1.0-10-amd64");
+}
+
+void TestUtils::resolveKernelFiles_archPairs()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    touchFiles(dir.path(), {"vmlinuz-linux", "initramfs-linux.img", "vmlinuz-linux-lts", "initramfs-linux-lts.img"});
+    QCOMPARE(utils::resolveKernelFiles(dir.path(), "linux", false).initrd, dir.path() + "/initramfs-linux.img");
+    QCOMPARE(utils::resolveKernelFiles(dir.path(), "linux-lts", false).initrd, dir.path() + "/initramfs-linux-lts.img");
+}
+
+void TestUtils::resolveKernelFiles_archMissingInitramfs()
+{
+    // The LTS kernel must not be paired with the standard kernel's initramfs
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    touchFiles(dir.path(), {"vmlinuz-linux", "initramfs-linux.img", "vmlinuz-linux-lts"});
+    const auto files = utils::resolveKernelFiles(dir.path(), "linux-lts", false);
+    QCOMPARE(files.vmlinuz, dir.path() + "/vmlinuz-linux-lts");
+    QCOMPARE(files.initrd, dir.path() + "/initramfs-linux-lts.img");
+    QVERIFY(!QFile::exists(files.initrd));
 }
 
 QTEST_MAIN(TestUtils)

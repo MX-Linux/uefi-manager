@@ -11,19 +11,21 @@ KernelFiles resolveKernelFiles(const QString &sourceDir, const QString &kernelVe
 {
     KernelFiles result;
 
-    // vmlinuz: try versioned first, fall back to Arch-style vmlinuz-linux
+    // A selected kernel must be paired with its own initramfs: another kernel's image may lack the modules
+    // needed to mount the root filesystem. When a file is missing, return the expected path so the caller
+    // reports it. Frugal installs have no kernel selection, so they keep the Arch-style fallbacks.
     result.vmlinuz = QString("%1/vmlinuz%2").arg(sourceDir, isFrugal ? "" : "-" + kernelVersion);
-    if (!QFile::exists(result.vmlinuz)) {
+    if (isFrugal && !QFile::exists(result.vmlinuz)) {
         result.vmlinuz = QString("%1/vmlinuz-linux").arg(sourceDir);
     }
 
-    // initrd: try initrd pattern first, then initramfs, then Arch fallback
+    // initrd: Debian-style initrd.img-<version> first, then initramfs-<version>.img (Arch, Fedora)
     const QString initrdPath = QString("%1/initrd%2").arg(sourceDir, isFrugal ? ".gz" : ".img-" + kernelVersion);
     const QString initramfsPath = QString("%1/initramfs-%2").arg(sourceDir, isFrugal ? "" : kernelVersion + ".img");
 
     if (QFile::exists(initrdPath)) {
         result.initrd = initrdPath;
-    } else if (QFile::exists(initramfsPath)) {
+    } else if (QFile::exists(initramfsPath) || !isFrugal) {
         result.initrd = initramfsPath;
     } else {
         const QString archFallback = QString("%1/initramfs-linux.img").arg(sourceDir);
