@@ -31,8 +31,5 @@ inline constexpr QLatin1StringView ESP_TYPE_MBR("0xef");
 // Base directory for temporary mounts
 inline constexpr QLatin1StringView MOUNT_BASE("/mnt/uefi-manager");
 
-// Log file path
-inline constexpr QLatin1StringView LOG_FILE_PATH("/tmp/uefi-manager.log");
-
 // Byte pattern used to scrub sensitive data from memory
 inline constexpr char SCRUB_BYTE = static_cast<char>(0xA5);

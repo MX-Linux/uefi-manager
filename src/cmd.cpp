@@ -150,10 +150,11 @@ bool Cmd::helperProc(const QStringList &helperArgs, QString *output, const QByte
     return result;
 }
 
-bool Cmd::procElevated(const QString &cmd, const QStringList &args, QString *output, QuietMode quiet)
+bool Cmd::procElevated(const QString &cmd, const QStringList &args, QString *output, QuietMode quiet,
+                       const QByteArray *input)
 {
     if (getuid() == 0) {
-        return proc(cmd, args, output, nullptr, quiet);
+        return proc(cmd, args, output, input, quiet);
     }
 
     if (cmd != helperLibrary) {
@@ -163,7 +164,7 @@ bool Cmd::procElevated(const QString &cmd, const QStringList &args, QString *out
 
     QStringList helperArgs {"lib"};
     helperArgs += args;
-    return helperProc(helperArgs, output, nullptr, quiet);
+    return helperProc(helperArgs, output, input, quiet);
 }
 
 void Cmd::handleElevationError()

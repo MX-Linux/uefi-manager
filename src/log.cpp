@@ -22,12 +22,23 @@
 #include "log.h"
 
 #include <QDateTime>
+#include <QStandardPaths>
 
 Log::Log(const QString &fileName)
 {
-    logFile.setFileName(fileName);
+    // The runtime directory (XDG_RUNTIME_DIR, or a private fallback Qt creates) is mode 0700, so
+    // other users can't read the log or block it by leaving their own file at the same path.
+    // If there is no runtime directory, the empty name makes open() fail and file logging is skipped.
+    QString path = fileName;
+    if (path.isEmpty()) {
+        const QString runtimeDir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+        if (!runtimeDir.isEmpty()) {
+            path = runtimeDir + "/uefi-manager.log";
+        }
+    }
+    logFile.setFileName(path);
     if (!logFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qDebug() << "Could not open log file:" << fileName;
+        qDebug() << "Could not open log file:" << path;
         return;
     }
     qInstallMessageHandler(Log::messageHandler);
@@ -74,6 +85,15 @@ void Log::flush()
     if (logFile.isOpen()) {
         logFile.flush();
     }
+}
+
+QByteArray Log::readLog()
+{
+    QFile file(getLog());
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return file.readAll();
 }
 
 bool Log::hasRelevantContent(qsizetype minimumLineCount)

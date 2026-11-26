@@ -30,8 +30,10 @@
 class Log
 {
 public:
-    explicit Log(const QString &fileName = LOG_FILE_PATH);
+    // An empty fileName uses uefi-manager.log in the user's private runtime directory
+    explicit Log(const QString &fileName = {});
     static QString getLog();
+    [[nodiscard]] static QByteArray readLog();
     static void flush();
     [[nodiscard]] static bool hasRelevantContent(qsizetype minimumLineCount = 1);
     static void messageHandler(QtMsgType type, const QMessageLogContext &, const QString &msg);

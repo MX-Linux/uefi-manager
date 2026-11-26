@@ -38,7 +38,7 @@ public:
     bool procAsRoot(const QString &cmd, const QStringList &args = {}, QString *output = nullptr,
                     const QByteArray *input = nullptr, QuietMode quiet = QuietMode::No);
     bool procElevated(const QString &cmd, const QStringList &args = {}, QString *output = nullptr,
-                      QuietMode quiet = QuietMode::No);
+                      QuietMode quiet = QuietMode::No, const QByteArray *input = nullptr);
     const QString &helperLibraryPath() const { return helperLibrary; }
     static void resetElevation() { elevationFailed = false; }
 

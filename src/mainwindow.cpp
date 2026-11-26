@@ -110,7 +110,11 @@ MainWindow::~MainWindow()
 
     Log::flush();
     if (Log::hasRelevantContent(7)) {
-        cmd.procElevated(cmd.helperLibraryPath(), {"copy_log"});
+        // Send the contents rather than a path, so root never opens a file the user controls
+        const QByteArray logContents = Log::readLog();
+        if (!logContents.isEmpty()) {
+            cmd.procElevated(cmd.helperLibraryPath(), {"copy_log"}, nullptr, QuietMode::No, &logContents);
+        }
     }
 
     delete ui;
