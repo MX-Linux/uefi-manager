@@ -111,8 +111,13 @@ MainWindow::~MainWindow()
         if (!newLuksDevices.isEmpty()) {
             cleanupArgs << "--luks" << newLuksDevices;
         }
+        // A cancelled authorization for an earlier operation must not skip this separate request
+        Cmd::resetElevation();
         if (!cmd.procElevated(cmd.helperLibraryPath(), cleanupArgs)) {
             qWarning() << "Cleanup failed";
+            QMessageBox::warning(nullptr, QApplication::applicationDisplayName(),
+                                 tr("Could not clean up. Partitions that UEFI Manager mounted or encrypted devices "
+                                    "it unlocked may still be active."));
         }
     }
 
