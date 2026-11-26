@@ -68,6 +68,7 @@ private:
     QString distro = getDistroName();
     int cachedTimeout = 0;
     QString espMountPoint;
+    QString loaderSubDir; // Entry's directory under the ESP's EFI folder, set by selectESP()
     QString frugalDir;
     QString rootDrive;
     QString rootPartition;
@@ -102,6 +103,7 @@ private:
     [[nodiscard]] QString getDistroName(bool pretty = false, const QString &mountPoint = "/",
                                         const QString &releaseFile = "initrd_release") const;
     [[nodiscard]] QString getMountPoint(const QString &part);
+    [[nodiscard]] QString loaderSubPath();
     [[nodiscard]] QString mountPartition(QString part);
     [[nodiscard]] QString openLuks(const QString &part);
     [[nodiscard]] QString selectESP();

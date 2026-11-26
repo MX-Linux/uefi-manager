@@ -34,6 +34,7 @@
 #include <QRegularExpression>
 
 #include <QCollator>
+#include <QCryptographicHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -451,15 +452,14 @@ void MainWindow::tabWidgetCurrentChanged()
 
 bool MainWindow::copyKernel()
 {
-    if (espMountPoint.isEmpty()) {
-        qWarning() << "ESP mount point is empty.";
+    if (espMountPoint.isEmpty() || loaderSubDir.isEmpty()) {
+        qWarning() << "ESP mount point or loader directory is empty.";
         return false;
     }
 
     const bool isFrugal = ui->tabWidget->currentIndex() == Tab::Frugal;
 
-    const QString subDir = isFrugal ? "/frugal" : "/stub";
-    const QString targetPath = espMountPoint + "/EFI/" + distro + subDir;
+    const QString targetPath = espMountPoint + "/EFI/" + loaderSubDir;
 
     // Create target directory if it doesn't exist
     if (!QDir().exists(targetPath)) {
@@ -518,19 +518,18 @@ bool MainWindow::installEfiStub(const QString &esp)
     }
 
     const bool isFrugal = ui->tabWidget->currentIndex() == Tab::Frugal;
-    const QString efiDir = isFrugal ? "frugal" : "stub";
     const QString entryName = isFrugal ? ui->textUefiEntryFrugal->text() : ui->textEntryName->text();
+    const QString efiDir = "\\EFI\\" + QString(loaderSubDir).replace('/', '\\');
 
     QStringList args;
     args << "--disk" << disk << "--part" << part << "--create"
-         << "--label" << entryName << "--loader"
-         << QString("\\EFI\\%1\\%2\\vmlinuz").arg(distro, efiDir) << "--unicode";
+         << "--label" << entryName << "--loader" << efiDir + "\\vmlinuz" << "--unicode";
 
-    const QString espPath = espMountPoint + "/EFI/" + distro + "/" + efiDir;
+    const QString espPath = espMountPoint + "/EFI/" + loaderSubDir;
 
-    const QString initrdEfi = QString("initrd=\\EFI\\%1\\%2\\initrd.img").arg(distro, efiDir);
-    const QString amdUcodeEfi = QString("initrd=\\EFI\\%1\\%2\\amducode.img").arg(distro, efiDir);
-    const QString intUcodeEfi = QString("initrd=\\EFI\\%1\\%2\\intucode.img").arg(distro, efiDir);
+    const QString initrdEfi = "initrd=" + efiDir + "\\initrd.img";
+    const QString amdUcodeEfi = "initrd=" + efiDir + "\\amducode.img";
+    const QString intUcodeEfi = "initrd=" + efiDir + "\\intucode.img";
 
     const QString amdUcode = QString("%1/amducode.img").arg(espPath);
     const QString intUcode = QString("%1/intucode.img").arg(espPath);
@@ -1607,10 +1606,34 @@ QString MainWindow::selectESP()
         return {};
     }
 
-    const QString subDir = isFrugal ? "/frugal" : "/stub";
-    const QString targetPath = espMountPoint + "/EFI/" + distro + subDir;
-    cleanEspTarget(targetPath);
+    loaderSubDir = loaderSubPath();
+    cleanEspTarget(espMountPoint + "/EFI/" + loaderSubDir);
     return selectedEsp;
+}
+
+// Directory under the ESP's EFI folder that holds this entry's kernel and initrd. It combines the entry
+// name with a hash of the source installation, so installing another system of the same distribution
+// (or the same one under a new name) can't replace files an existing entry boots. Installing again from
+// the same source under the same name updates that entry's files.
+QString MainWindow::loaderSubPath()
+{
+    const bool isFrugal = ui->tabWidget->currentIndex() == Tab::Frugal;
+    QString identity;
+    if (isFrugal) {
+        identity = (options.uuid.isEmpty() && options.bdir.isEmpty()) ? frugalDir : options.uuid + '/' + options.bdir;
+    } else {
+        QString device = ui->comboPartitionStub->currentText().section(' ', 0, 0);
+        if (!device.startsWith("/dev/")) {
+            device.prepend("/dev/");
+        }
+        QString uuid;
+        cmd.proc("lsblk", {"--nodeps", "--noheadings", "--output", "UUID", device}, &uuid, nullptr, QuietMode::Yes);
+        identity = uuid.trimmed().isEmpty() ? device : uuid.trimmed();
+    }
+    const QString label = isFrugal ? ui->textUefiEntryFrugal->text() : ui->textEntryName->text();
+    const QString name = utils::sanitizePathComponent(label.trimmed().left(32), "entry");
+    const QString hash = QCryptographicHash::hash(identity.toUtf8(), QCryptographicHash::Sha1).toHex().left(8);
+    return QString("%1/%2/%3-%4").arg(distro, isFrugal ? "frugal" : "stub", name, hash);
 }
 
 void MainWindow::pushNextClicked()
