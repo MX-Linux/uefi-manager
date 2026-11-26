@@ -11,6 +11,9 @@ cleanup_temp() {
     local mounts=()
     local dirs=()
     local luks_devices=()
+    # Set when a tracked mount or LUKS mapping is still active after cleanup; checked at the end so
+    # one failure doesn't stop the rest from being cleaned up
+    local failed=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -33,9 +36,14 @@ cleanup_temp() {
         mp="$(realpath -m "${mounts[i]}")"
         if [[ "$mp" != "$mount_base"/* && "$mp" != "$allowed_mount_base"/* ]]; then
             echo "Error: refusing to unmount path outside allowed directories: $mp" >&2
+            failed=1
             continue
         fi
         umount "$mp" 2>/dev/null || umount -l "$mp" 2>/dev/null || true
+        if mountpoint -q "$mp"; then
+            echo "Error: could not unmount $mp" >&2
+            failed=1
+        fi
     done
 
     # Remove tracked directories
@@ -63,10 +71,17 @@ cleanup_temp() {
     for dev in "${luks_devices[@]}"; do
         if [[ "$dev" == */* || "$dev" != luks-* ]]; then
             echo "Error: refusing to close unexpected LUKS device: $dev" >&2
+            failed=1
             continue
         fi
         cryptsetup close "$dev" 2>/dev/null || true
+        if [[ -e "/dev/mapper/$dev" ]]; then
+            echo "Error: could not close LUKS device $dev" >&2
+            failed=1
+        fi
     done
+
+    return "$failed"
 }
 
 copy_log() {
