@@ -201,6 +201,22 @@ else()
     target_compile_options(helper PRIVATE -Werror=return-local-addr)
 endif()
 
+option(APPIMAGE_BUILD "Build the relocatable AppImage" OFF)
+if(APPIMAGE_BUILD)
+    target_compile_definitions(uefi-manager PRIVATE APPIMAGE_BUILD)
+    target_compile_definitions(helper PRIVATE APPIMAGE_BUILD)
+
+    find_program(EFIBOOTMGR_EXECUTABLE efibootmgr)
+    if(NOT EFIBOOTMGR_EXECUTABLE)
+        message(FATAL_ERROR "Building the AppImage requires efibootmgr")
+    endif()
+    # The helper resolves these from its own directory, including in the build-tree tests.
+    configure_file("${EFIBOOTMGR_EXECUTABLE}" "${CMAKE_BINARY_DIR}/efibootmgr" COPYONLY)
+    configure_file(scripts/uefimanager-lib "${CMAKE_BINARY_DIR}/uefimanager-lib" COPYONLY)
+    install(PROGRAMS "${CMAKE_BINARY_DIR}/efibootmgr" "${CMAKE_BINARY_DIR}/uefimanager-lib"
+            DESTINATION "${HELPER_INSTALL_DIR}")
+endif()
+
 # Set compile definitions
 target_compile_definitions(uefi-manager PRIVATE
     HELPER_PATH="${HELPER_PATH}"

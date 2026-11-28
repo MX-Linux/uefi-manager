@@ -24,8 +24,6 @@
 
 namespace
 {
-constexpr auto UEFI_MANAGER_LIB = "/usr/lib/uefi-manager/uefimanager-lib";
-
 struct ProcessResult
 {
     bool started = false;
@@ -63,7 +61,11 @@ void printError(const QString &message)
         {"blkid", {"/usr/sbin/blkid", "/sbin/blkid", "/usr/bin/blkid", "/bin/blkid"}},
         {"cp", {"/usr/bin/cp", "/bin/cp"}},
         {"cryptsetup", {"/usr/sbin/cryptsetup", "/sbin/cryptsetup", "/usr/bin/cryptsetup", "/bin/cryptsetup"}},
+#ifdef APPIMAGE_BUILD
+        {"efibootmgr", {QCoreApplication::applicationDirPath() + QStringLiteral("/efibootmgr")}},
+#else
         {"efibootmgr", {"/usr/sbin/efibootmgr", "/sbin/efibootmgr", "/usr/bin/efibootmgr", "/bin/efibootmgr"}},
+#endif
         {"findmnt", {"/usr/bin/findmnt", "/bin/findmnt"}},
         {"grep", {"/usr/bin/grep", "/bin/grep"}},
         {"mkdir", {"/usr/bin/mkdir", "/bin/mkdir"}},
@@ -169,7 +171,11 @@ void printError(const QString &message)
         return 1;
     }
 
-    const QFileInfo info(QString::fromUtf8(UEFI_MANAGER_LIB));
+#ifdef APPIMAGE_BUILD
+    const QFileInfo info(QCoreApplication::applicationDirPath() + QStringLiteral("/uefimanager-lib"));
+#else
+    const QFileInfo info(QStringLiteral("/usr/lib/uefi-manager/uefimanager-lib"));
+#endif
     if (!info.exists() || !info.isExecutable()) {
         printError(QStringLiteral("uefimanager-lib is not available"));
         return 127;

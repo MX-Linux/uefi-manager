@@ -33,6 +33,7 @@
 
 #include <memory>
 
+#include "apppaths.h"
 #include "cmd.h"
 #include "common.h"
 #include "log.h"
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
 
     QTranslator appTran;
     if (appTran.load(QApplication::applicationName() + '_' + QLocale::system().name(),
-                     "/usr/share/" + QApplication::applicationName() + "/locale")) {
+                     appPath("share/" + QApplication::applicationName() + "/locale"))) {
         QApplication::installTranslator(&appTran);
     }
 

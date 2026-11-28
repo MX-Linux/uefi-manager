@@ -20,6 +20,7 @@
  * along with this package. If not, see <http://www.gnu.org/licenses/>.
  **********************************************************************/
 
+#include "apppaths.h"
 #include "cmd.h"
 
 #include <QApplication>
@@ -46,8 +47,13 @@ Cmd::Cmd(QObject *parent)
         qWarning() << "No suitable elevation command found (pkexec or gksu)";
     }
 
+#ifdef APPIMAGE_BUILD
+    helper = appPath("libexec/uefi-manager/helper");
+    helperLibrary = appPath("libexec/uefi-manager/uefimanager-lib");
+#else
     helper = QStringLiteral(HELPER_PATH);
     helperLibrary = QString("/usr/lib/%1/uefimanager-lib").arg(QApplication::applicationName());
+#endif
 
     connect(this, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Cmd::done,
             Qt::UniqueConnection);
@@ -155,7 +161,18 @@ bool Cmd::helperProc(const QStringList &helperArgs, QString *output, const QByte
     const QString program = (getuid() == 0) ? helper : elevationCommand;
     QStringList programArgs = helperArgs;
     if (getuid() != 0) {
+#ifdef APPIMAGE_BUILD
+        // Reopen the image after authorization so the helper runs from its own mount.
+        const QString image = qEnvironmentVariable("APPIMAGE");
+        if (!image.isEmpty()) {
+            programArgs.prepend(QStringLiteral("--run-helper"));
+            programArgs.prepend(image);
+        } else {
+            programArgs.prepend(helper); // Running from an extracted AppDir
+        }
+#else
         programArgs.prepend(helper);
+#endif
     }
 
     const bool result = proc(program, programArgs, output, input, quiet, Elevation::No);

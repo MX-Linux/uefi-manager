@@ -19,6 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this package. If not, see <http://www.gnu.org/licenses/>.
  **********************************************************************/
+#include "apppaths.h"
 #include "about.h"
 
 #include <QCoreApplication>
@@ -111,8 +112,7 @@ void displayAboutMsgBox(const QString &title, const QString &message, const QStr
         auto *text = new QTextEdit(&changelog);
         text->setReadOnly(true);
 
-        QString changelogPath
-            = "/usr/share/doc/" + QFileInfo(QCoreApplication::applicationFilePath()).fileName() + "/changelog.gz";
+        const QString changelogPath = appPath("share/doc/uefi-manager/changelog.gz");
         bool zlessExists = !QStandardPaths::findExecutable("zless").isEmpty();
         bool changelogExists = QFileInfo::exists(changelogPath);
 

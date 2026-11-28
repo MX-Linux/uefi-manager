@@ -20,6 +20,7 @@
  * along with this package. If not, see <http://www.gnu.org/licenses/>.
  **********************************************************************/
 
+#include "apppaths.h"
 #include "mainwindow.h"
 #include "qapplication.h"
 #include "ui_mainwindow.h"
@@ -846,7 +847,11 @@ void MainWindow::readBootEntries(QListWidget *listEntries, QLabel *textTimeout, 
                                  QLabel *textBootCurrent, QStringList *bootorder)
 {
     QString efiOut;
+#ifdef APPIMAGE_BUILD
+    cmd.proc(appPath("libexec/uefi-manager/efibootmgr"), {}, &efiOut);
+#else
     cmd.proc("efibootmgr", {}, &efiOut);
+#endif
     QStringList entries = efiOut.split('\n', Qt::SkipEmptyParts);
     static const QRegularExpression bootEntryRegex(R"(^Boot[0-9A-Fa-f]{4}\*?\s+)");
     cachedTimeout = 0;
@@ -1832,7 +1837,7 @@ void MainWindow::pushAboutClicked()
             + tr("Tool for managing UEFI boot entries")
             + R"(</h3></p><p align="center"><a href="http://mxlinux.org">http://mxlinux.org</a><br /></p><p align="center">)"
             + tr("Copyright (c) MX Linux") + "<br /><br /></p>",
-        "/usr/share/doc/uefi-manager/license.html", tr("%1 License").arg(this->windowTitle()));
+        appPath("share/doc/uefi-manager/license.html"), tr("%1 License").arg(this->windowTitle()));
 
     this->show();
 }

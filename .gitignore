@@ -39,3 +39,5 @@ Makefile*
 .tx/
 
 uefi-manager
+
+/build-appimage/
